@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/admin/api";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const STATS = [
   { slug: "users", label: "Users", path: "/users" },
@@ -38,27 +45,29 @@ export default function DashPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-1">Dashboard</h1>
-      <p className="text-sm text-slate-500 mb-6">
+      <p className="text-sm text-muted-foreground mb-6">
         Quick stats across the store.
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {STATS.map((s) => (
-          <Link
-            key={s.slug}
-            href={`/admin/${s.slug}`}
-            className="bg-white rounded-lg border border-slate-200 p-4 hover:border-blue-400 hover:shadow-sm transition"
-          >
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              {s.label}
-            </div>
-            <div className="mt-1 text-2xl font-semibold">
-              {loading
-                ? "…"
-                : counts[s.slug] === null
-                  ? "—"
-                  : counts[s.slug]}
-            </div>
+          <Link key={s.slug} href={`/admin/${s.slug}`} className="group">
+            <Card className="transition-shadow hover:shadow-md cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
+                  {s.label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <p className="text-3xl font-bold">
+                    {counts[s.slug] === null ? "—" : counts[s.slug]}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           </Link>
         ))}
       </div>

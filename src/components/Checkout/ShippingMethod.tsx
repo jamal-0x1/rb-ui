@@ -25,7 +25,7 @@ const ShippingMethod = () => {
               />
               {/* selectShipping === 'free' ? 'border-4 border-blue' : 'border border-gray-4' */}
               <div
-                className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                className={`flex h-4 w-4 items-center justify-center rounded-full ৳{
                   shippingMethod === "free"
                     ? "border-4 border-blue"
                     : "border border-gray-4"
@@ -48,7 +48,7 @@ const ShippingMethod = () => {
                 onChange={() => setShippingMethod("fedex")}
               />
               <div
-                className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                className={`flex h-4 w-4 items-center justify-center rounded-full ৳{
                   shippingMethod === "fedex"
                     ? "border-4 border-blue"
                     : "border border-gray-4"
@@ -68,7 +68,7 @@ const ShippingMethod = () => {
                 </div>
 
                 <div className="border-l border-gray-4 pl-4">
-                  <p className="font-semibold text-dark">$10.99</p>
+                  <p className="font-semibold text-dark">৳10.99</p>
                   <p className="text-custom-xs">Standard Shipping</p>
                 </div>
               </div>
@@ -88,7 +88,7 @@ const ShippingMethod = () => {
                 onChange={() => setShippingMethod("dhl")}
               />
               <div
-                className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                className={`flex h-4 w-4 items-center justify-center rounded-full ৳{
                   shippingMethod === "dhl"
                     ? "border-4 border-blue"
                     : "border border-gray-4"
@@ -108,7 +108,7 @@ const ShippingMethod = () => {
                 </div>
 
                 <div className="border-l border-gray-4 pl-4">
-                  <p className="font-semibold text-dark">$12.50</p>
+                  <p className="font-semibold text-dark">৳12.50</p>
                   <p className="text-custom-xs">Standard Shipping</p>
                 </div>
               </div>
