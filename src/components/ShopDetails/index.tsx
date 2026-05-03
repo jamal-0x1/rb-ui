@@ -144,7 +144,7 @@ const ShopDetails = () => {
                       <button
                         onClick={() => setPreviewImg(key)}
                         key={key}
-                        className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ৳{key === previewImg
+                        className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${key === previewImg
                           ? "border-blue"
                           : "border-transparent"
                           }`}
@@ -316,11 +316,11 @@ const ShopDetails = () => {
 
                   <h3 className="font-medium text-custom-1 mb-4.5">
                     <span className="text-sm sm:text-base text-dark">
-                      Price: ৳{product.price}
+                      Price: ${product.price}
                     </span>
                     <span className="line-through">
                       {" "}
-                      ৳{product.discountedPrice}{" "}
+                      ${product.discountedPrice}{" "}
                     </span>
                   </h3>
 
@@ -394,13 +394,13 @@ const ShopDetails = () => {
                                   onChange={() => setActiveColor(color)}
                                 />
                                 <div
-                                  className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ৳{activeColor === color && "border"
+                                  className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${activeColor === color && "border"
                                     }`}
-                                  style={{ borderColor: `৳{color}` }}
+                                  style={{ borderColor: `${color}` }}
                                 >
                                   <span
                                     className="block w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: `৳{color}` }}
+                                    style={{ backgroundColor: `${color}` }}
                                   ></span>
                                 </div>
                               </div>
@@ -433,7 +433,7 @@ const ShopDetails = () => {
 
                                 {/*  */}
                                 <div
-                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ৳{storage === item.id
+                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${storage === item.id
                                     ? "border-blue bg-blue"
                                     : "border-gray-4"
                                     } `}
@@ -500,7 +500,7 @@ const ShopDetails = () => {
 
                                 {/*  */}
                                 <div
-                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ৳{type === item.id
+                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${type === item.id
                                     ? "border-blue bg-blue"
                                     : "border-gray-4"
                                     } `}
@@ -567,7 +567,7 @@ const ShopDetails = () => {
 
                                 {/*  */}
                                 <div
-                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ৳{sim === item.id
+                                  className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${sim === item.id
                                     ? "border-blue bg-blue"
                                     : "border-gray-4"
                                     } `}
@@ -706,7 +706,7 @@ const ShopDetails = () => {
                   <button
                     key={key}
                     onClick={() => setActiveTab(item.id)}
-                    className={`font-medium lg:text-lg ease-out duration-200 hover:text-blue relative before:h-0.5 before:bg-blue before:absolute before:left-0 before:bottom-0 before:ease-out before:duration-200 hover:before:w-full ৳{activeTab === item.id
+                    className={`font-medium lg:text-lg ease-out duration-200 hover:text-blue relative before:h-0.5 before:bg-blue before:absolute before:left-0 before:bottom-0 before:ease-out before:duration-200 hover:before:w-full ${activeTab === item.id
                       ? "text-blue before:w-full"
                       : "text-dark before:w-0"
                       }`}
@@ -721,7 +721,7 @@ const ShopDetails = () => {
               {/* <!-- tab content one start --> */}
               <div>
                 <div
-                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ৳{activeTab === "tabOne" ? "flex" : "hidden"
+                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabOne" ? "flex" : "hidden"
                     }`}
                 >
                   <div className="max-w-[670px] w-full">
@@ -773,7 +773,7 @@ const ShopDetails = () => {
               {/* <!-- tab content two start --> */}
               <div>
                 <div
-                  className={`rounded-xl bg-white shadow-1 p-4 sm:p-6 mt-10 ৳{activeTab === "tabTwo" ? "block" : "hidden"
+                  className={`rounded-xl bg-white shadow-1 p-4 sm:p-6 mt-10 ${activeTab === "tabTwo" ? "block" : "hidden"
                     }`}
                 >
                   {/* <!-- info item --> */}
@@ -915,7 +915,7 @@ const ShopDetails = () => {
               {/* <!-- tab content three start --> */}
               <div>
                 <div
-                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ৳{activeTab === "tabThree" ? "flex" : "hidden"
+                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabThree" ? "flex" : "hidden"
                     }`}
                 >
                   <div className="max-w-[570px] w-full">
