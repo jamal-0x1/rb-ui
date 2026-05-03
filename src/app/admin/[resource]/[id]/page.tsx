@@ -35,20 +35,14 @@ const ORDER_STATUS_VARIANT: Record<
   refunded: "destructive",
 };
 
-const CURRENCY_SYMBOL: Record<string, string> = {
-  BDT: "৳",
-  USD: "$",
-};
-
-function fmt(currency: string, amount: string | number) {
+function fmt(_currency: string, amount: string | number) {
   const n = Number(amount);
   const safe = isNaN(n) ? 0 : n;
-  const symbol = CURRENCY_SYMBOL[currency] ?? `${currency} `;
   const num = new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(safe);
-  return `${symbol}${num}`;
+  return `৳${num}`;
 }
 
 function formatValue(
