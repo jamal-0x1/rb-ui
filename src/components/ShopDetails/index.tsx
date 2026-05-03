@@ -133,6 +133,7 @@ const ShopDetails = () => {
                           alt="products-details"
                           width={400}
                           height={400}
+                          unoptimized
                         />
                       )}
                     </div>
@@ -154,6 +155,7 @@ const ShopDetails = () => {
                           height={50}
                           src={item}
                           alt="thumbnail"
+                          unoptimized
                         />
                       </button>
                     ))}
@@ -316,11 +318,11 @@ const ShopDetails = () => {
 
                   <h3 className="font-medium text-custom-1 mb-4.5">
                     <span className="text-sm sm:text-base text-dark">
-                      Price: ${product.price}
+                      Price: ৳{product.price}
                     </span>
                     <span className="line-through">
                       {" "}
-                      ${product.discountedPrice}{" "}
+                      ৳{product.discountedPrice}{" "}
                     </span>
                   </h3>
 

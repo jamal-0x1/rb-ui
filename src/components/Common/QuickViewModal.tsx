@@ -106,6 +106,7 @@ const QuickViewModal = () => {
                         width={61}
                         height={61}
                         className="aspect-square"
+                        unoptimized
                       />
                     </button>
                   ))}
@@ -141,6 +142,7 @@ const QuickViewModal = () => {
                         alt="products-details"
                         width={400}
                         height={400}
+                        unoptimized
                       />
                     )}
                   </div>
@@ -315,10 +317,10 @@ const QuickViewModal = () => {
 
                   <span className="flex items-center gap-2">
                     <span className="font-semibold text-dark text-xl xl:text-heading-4">
-                      ${product.discountedPrice}
+                      ৳{product.discountedPrice}
                     </span>
                     <span className="font-medium text-dark-4 text-lg xl:text-2xl line-through">
-                      ${product.price}
+                      ৳{product.price}
                     </span>
                   </span>
                 </div>
