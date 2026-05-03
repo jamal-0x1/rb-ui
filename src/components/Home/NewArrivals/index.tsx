@@ -1,10 +1,24 @@
-import React from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ProductItem from "@/components/Common/ProductItem";
-import shopData from "@/components/Shop/shopData";
+import {
+  fetchPublic,
+  dbProductToShopItem,
+  type DbProduct,
+} from "@/lib/publicApi";
+import type { Product } from "@/types/product";
 
 const NewArrival = () => {
+  const [shopData, setShopData] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetchPublic<DbProduct[]>("/products?limit=8")
+      .then((rows) => setShopData(rows.map(dbProductToShopItem)))
+      .catch(() => setShopData([]));
+  }, []);
+
   return (
     <section className="overflow-hidden pt-15">
       <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
@@ -48,8 +62,8 @@ const NewArrival = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-7.5 gap-y-9">
           {/* <!-- New Arrivals item --> */}
-          {shopData.map((item, key) => (
-            <ProductItem item={item} key={key} />
+          {shopData.map((item) => (
+            <ProductItem item={item} key={String(item.id)} />
           ))}
         </div>
       </div>
