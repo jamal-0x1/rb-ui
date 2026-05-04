@@ -60,31 +60,7 @@ const Signup = () => {
               <p>Enter your details below</p>
             </div>
 
-            <div className="flex flex-col gap-4.5">
-              <button
-                type="button"
-                disabled
-                title="Coming soon"
-                className="flex justify-center items-center gap-3.5 rounded-lg border border-gray-3 bg-gray-1 p-3 opacity-60 cursor-not-allowed"
-              >
-                Sign Up with Google (coming soon)
-              </button>
-              <button
-                type="button"
-                disabled
-                title="Coming soon"
-                className="flex justify-center items-center gap-3.5 rounded-lg border border-gray-3 bg-gray-1 p-3 opacity-60 cursor-not-allowed"
-              >
-                Sign Up with GitHub (coming soon)
-              </button>
-            </div>
-
-            <span className="relative z-1 block font-medium text-center mt-4.5">
-              <span className="block absolute -z-1 left-0 top-1/2 h-px w-full bg-gray-3"></span>
-              <span className="inline-block px-3 bg-white">Or</span>
-            </span>
-
-            <form onSubmit={handleSubmit} noValidate className="mt-5.5">
+            <form onSubmit={handleSubmit} noValidate>
               {error && (
                 <div className="mb-5 rounded-lg border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
                   {error}

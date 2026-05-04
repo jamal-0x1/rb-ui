@@ -103,30 +103,6 @@ const Signin = () => {
                 Forgot your password?
               </Link>
 
-              <span className="relative z-1 block font-medium text-center mt-4.5">
-                <span className="block absolute -z-1 left-0 top-1/2 h-px w-full bg-gray-3"></span>
-                <span className="inline-block px-3 bg-white">Or</span>
-              </span>
-
-              <div className="flex flex-col gap-4.5 mt-4.5">
-                <button
-                  type="button"
-                  disabled
-                  title="Coming soon"
-                  className="flex justify-center items-center gap-3.5 rounded-lg border border-gray-3 bg-gray-1 p-3 opacity-60 cursor-not-allowed"
-                >
-                  Sign In with Google (coming soon)
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  title="Coming soon"
-                  className="flex justify-center items-center gap-3.5 rounded-lg border border-gray-3 bg-gray-1 p-3 opacity-60 cursor-not-allowed"
-                >
-                  Sign In with GitHub (coming soon)
-                </button>
-              </div>
-
               <p className="text-center mt-6">
                 Don&apos;t have an account?
                 <Link
