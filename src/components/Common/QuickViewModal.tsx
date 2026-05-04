@@ -13,7 +13,12 @@ import { toast } from "sonner";
 
 const QuickViewModal = () => {
   const { isModalOpen, closeModal } = useModalContext();
-  const { openPreviewModal } = usePreviewSlider();
+  const {
+    openPreviewModal,
+    isModalPreviewOpen,
+    currentIndex,
+    setCurrentIndex,
+  } = usePreviewSlider();
   const [quantity, setQuantity] = useState(1);
 
   const dispatch = useDispatch<AppDispatch>();
@@ -23,11 +28,20 @@ const QuickViewModal = () => {
 
   const [activePreview, setActivePreview] = useState(0);
 
+  // Mirror context index → local main image when fullscreen drives navigation
+  useEffect(() => {
+    if (isModalPreviewOpen) setActivePreview(currentIndex);
+  }, [currentIndex, isModalPreviewOpen]);
+
   // preview modal
   const handlePreviewSlider = () => {
     dispatch(updateproductDetails(product));
+    openPreviewModal(activePreview);
+  };
 
-    openPreviewModal();
+  const handleThumbClick = (key: number) => {
+    setActivePreview(key);
+    if (isModalPreviewOpen) setCurrentIndex(key);
   };
 
   // add to cart
@@ -44,9 +58,11 @@ const QuickViewModal = () => {
   };
 
   useEffect(() => {
-    // closing modal while clicking outside
-    function handleClickOutside(event) {
-      if (!event.target.closest(".modal-content")) {
+    // closing modal while clicking outside — but ignore while fullscreen preview is open
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (target.closest(".preview-slider")) return;
+      if (!target.closest(".modal-content")) {
         closeModal();
       }
     }
@@ -97,7 +113,7 @@ const QuickViewModal = () => {
                 <div className="flex flex-col gap-5">
                   {product.imgs.thumbnails?.map((img, key) => (
                     <button
-                      onClick={() => setActivePreview(key)}
+                      onClick={() => handleThumbClick(key)}
                       key={key}
                       className={`flex items-center justify-center w-20 h-20 overflow-hidden rounded-lg bg-gray-1 ease-out duration-200 hover:border-2 hover:border-blue ${activePreview === key && "border-2 border-blue"
                         }`}

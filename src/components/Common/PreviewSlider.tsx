@@ -1,6 +1,6 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import "swiper/css/navigation";
 import "swiper/css";
 import Image from "next/image";
@@ -9,25 +9,28 @@ import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { useAppSelector } from "@/redux/store";
 
 const PreviewSliderModal = () => {
-  const { closePreviewModal, isModalPreviewOpen, initialIndex } =
-    usePreviewSlider();
+  const {
+    closePreviewModal,
+    isModalPreviewOpen,
+    currentIndex,
+    setCurrentIndex,
+  } = usePreviewSlider();
 
   const data = useAppSelector((state) => state.productDetailsReducer.value);
   const previews: string[] = data?.imgs?.previews ?? [];
   const title = data?.title ?? "product image";
 
   const sliderRef = useRef<any>(null);
-  const [activeIndex, setActiveIndex] = useState(initialIndex);
 
-  // Sync swiper to initialIndex when modal opens
+  // Sync swiper when context's currentIndex changes externally (open or thumb pick)
   useEffect(() => {
-    if (isModalPreviewOpen) {
-      setActiveIndex(initialIndex);
-      if (sliderRef.current?.swiper) {
-        sliderRef.current.swiper.slideTo(initialIndex, 0);
+    if (isModalPreviewOpen && sliderRef.current?.swiper) {
+      const sw = sliderRef.current.swiper;
+      if (sw.activeIndex !== currentIndex) {
+        sw.slideTo(currentIndex, 0);
       }
     }
-  }, [isModalPreviewOpen, initialIndex]);
+  }, [isModalPreviewOpen, currentIndex]);
 
   // Esc to close, arrows to navigate
   useEffect(() => {
@@ -113,8 +116,8 @@ const PreviewSliderModal = () => {
           ref={sliderRef}
           slidesPerView={1}
           spaceBetween={20}
-          initialSlide={initialIndex}
-          onSlideChange={(s) => setActiveIndex(s.activeIndex)}
+          initialSlide={currentIndex}
+          onSlideChange={(s) => setCurrentIndex(s.activeIndex)}
         >
           {previews.map((src, i) => (
             <SwiperSlide key={`${src}-${i}`}>
@@ -142,7 +145,7 @@ const PreviewSliderModal = () => {
               aria-label={`go to image ${i + 1}`}
               onClick={() => sliderRef.current?.swiper?.slideTo(i)}
               className={`overflow-hidden rounded-md ring-2 transition-all ${
-                activeIndex === i
+                currentIndex === i
                   ? "ring-white scale-110"
                   : "ring-white/30 hover:ring-white/60"
               }`}

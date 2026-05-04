@@ -3,8 +3,9 @@ import React, { createContext, useContext, useState } from "react";
 
 interface PreviewSliderType {
   isModalPreviewOpen: boolean;
-  initialIndex: number;
+  currentIndex: number;
   openPreviewModal: (initialIndex?: number) => void;
+  setCurrentIndex: (idx: number) => void;
   closePreviewModal: () => void;
 }
 
@@ -18,12 +19,16 @@ export const usePreviewSlider = () => {
   return context;
 };
 
-export const PreviewSliderProvider = ({ children }: { children: React.ReactNode }) => {
+export const PreviewSliderProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [isModalPreviewOpen, setIsModalOpen] = useState(false);
-  const [initialIndex, setInitialIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const openPreviewModal = (idx: number = 0) => {
-    setInitialIndex(idx);
+    setCurrentIndex(idx);
     setIsModalOpen(true);
   };
 
@@ -33,7 +38,13 @@ export const PreviewSliderProvider = ({ children }: { children: React.ReactNode 
 
   return (
     <PreviewSlider.Provider
-      value={{ isModalPreviewOpen, initialIndex, openPreviewModal, closePreviewModal }}
+      value={{
+        isModalPreviewOpen,
+        currentIndex,
+        openPreviewModal,
+        setCurrentIndex,
+        closePreviewModal,
+      }}
     >
       {children}
     </PreviewSlider.Provider>

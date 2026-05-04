@@ -81,7 +81,12 @@ const ShopDetails = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { openCartModal } = useCartModalContext();
-  const { openPreviewModal } = usePreviewSlider();
+  const {
+    openPreviewModal,
+    isModalPreviewOpen,
+    currentIndex,
+    setCurrentIndex,
+  } = usePreviewSlider();
   const { user } = useCurrentUser();
 
   const productFromStorage = useAppSelector(
@@ -169,6 +174,11 @@ const ShopDetails = () => {
   useEffect(() => {
     setPreviewImg(0);
   }, [selectedVariant?.id]);
+
+  // Mirror fullscreen swiper changes back to PDP main image
+  useEffect(() => {
+    if (isModalPreviewOpen) setPreviewImg(currentIndex);
+  }, [currentIndex, isModalPreviewOpen]);
 
   const stockQty = selectedVariant?.inventory?.quantityOnHand ?? 0;
   const inStock = stockQty > 0;
@@ -368,7 +378,10 @@ const ShopDetails = () => {
                   <button
                     type="button"
                     key={key}
-                    onClick={() => setPreviewImg(key)}
+                    onClick={() => {
+                      setPreviewImg(key);
+                      if (isModalPreviewOpen) setCurrentIndex(key);
+                    }}
                     className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 border-2 hover:border-blue ${
                       key === previewImg ? "border-blue" : "border-transparent"
                     }`}
