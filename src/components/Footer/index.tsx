@@ -338,7 +338,16 @@ const Footer = () => {
         <div className="max-w-[1170px] mx-auto px-4 sm:px-8 xl:px-0">
           <div className="flex gap-5 flex-wrap items-center justify-between">
             <p className="text-dark font-medium">
-              &copy; {year}. All rights reserved by PimjoLabs.
+              &copy; {year}. All rights reserved by{" "}
+              <a
+                href="https://www.orbitalmind.xyz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-dark hover:text-blue ease-out duration-200"
+              >
+                OrbitalMind
+              </a>
+              .
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
