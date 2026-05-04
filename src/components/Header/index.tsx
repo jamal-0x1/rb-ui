@@ -10,6 +10,7 @@ import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import { fetchPublic, type ProductFacets } from "@/lib/publicApi";
+import { useCurrentUser } from "@/lib/userAuth";
 import Image from "next/image";
 
 const Header = () => {
@@ -25,6 +26,13 @@ const Header = () => {
 
   const product = useAppSelector((state) => state.cartReducer.items);
   const totalPrice = useSelector(selectTotalPrice);
+  const { user } = useCurrentUser();
+  const accountHref = user ? "/my-account" : "/signin";
+  const accountLabel = user
+    ? user.firstName?.trim()
+      ? user.firstName
+      : user.email.split("@")[0]
+    : "Sign In";
 
   const handleOpenCartModal = () => {
     openCartModal();
@@ -189,7 +197,7 @@ const Header = () => {
 
             <div className="flex w-full lg:w-auto justify-between items-center gap-5">
               <div className="flex items-center gap-5">
-                <Link href="/signin" className="flex items-center gap-2.5">
+                <Link href={accountHref} className="flex items-center gap-2.5">
                   <svg
                     width="24"
                     height="24"
@@ -213,10 +221,10 @@ const Header = () => {
 
                   <div>
                     <span className="block text-2xs text-dark-4 uppercase">
-                      account
+                      {user ? "account" : "account"}
                     </span>
                     <p className="font-medium text-custom-sm text-dark">
-                      Sign In
+                      {accountLabel}
                     </p>
                   </div>
                 </Link>
