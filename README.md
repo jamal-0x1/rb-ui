@@ -1,3 +1,21 @@
+# RB — Accessories Storefront (Next.js)
+
+> **Domain:** Consumer accessories ecommerce (BDT, Bangladesh market). Catalog skews toward small electronics + lifestyle accessories — mobile/tablet, watches, peripherals, gamepads, networking. Product-functionality decisions (filters, variants, attributes, image flows) optimize for that domain. Bulk apparel/sizing affordances are de-prioritized; brand/color/price/tag/in-stock are primary.
+
+## Environment
+
+Single env var, read by `src/lib/publicApi.ts`:
+
+| Var | Local default (`.env.local`) | Prod (`.env`) |
+|-----|------------------------------|---------------|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3000/api` | `https://rb-api.orbitalmind.xyz/api` |
+
+Must include the `/api` suffix. `.env` is committed (prod default); `.env.local` overrides locally and is gitignored. Browser-exposed → must keep the `NEXT_PUBLIC_` prefix per Next.js convention. Image hosts are pinned in `next.config.js#images.remotePatterns` — add new prod hosts there too.
+
+Run dev: `npm run dev` (port `5173`).
+
+---
+
 # Free eCommerce Template for Next.js - NextMerce
 
 The free Next.js eCommerce template is a lite version of the NextMerce Next.js eCommerce boilerplate, designed to streamline the launch and management of your online store.

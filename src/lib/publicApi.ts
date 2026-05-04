@@ -91,3 +91,40 @@ export async function fetchPublic<T>(path: string): Promise<T> {
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json();
 }
+
+export type ProductFacets = {
+  categories: { id: string; name: string; slug: string; count: number }[];
+  sizes: { value: string; count: number }[];
+  colors: { value: string; count: number }[];
+  tags: { value: string; count: number }[];
+  priceRange: { min: number; max: number };
+};
+
+export type ProductSort = "latest" | "oldest" | "price-asc" | "price-desc";
+
+export type ProductQuery = {
+  categoryIds?: string[];
+  tags?: string[];
+  sizes?: string[];
+  colors?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  sort?: ProductSort;
+  limit?: number;
+};
+
+export function buildProductQuery(q: ProductQuery): string {
+  const params = new URLSearchParams();
+  if (q.categoryIds?.length) params.set("categoryIds", q.categoryIds.join(","));
+  if (q.tags?.length) params.set("tags", q.tags.join(","));
+  if (q.sizes?.length) params.set("sizes", q.sizes.join(","));
+  if (q.colors?.length) params.set("colors", q.colors.join(","));
+  if (q.minPrice !== undefined) params.set("minPrice", String(q.minPrice));
+  if (q.maxPrice !== undefined) params.set("maxPrice", String(q.maxPrice));
+  if (q.inStock) params.set("inStock", "true");
+  if (q.sort) params.set("sort", q.sort);
+  if (q.limit) params.set("limit", String(q.limit));
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}

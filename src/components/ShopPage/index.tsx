@@ -1,150 +1,280 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import CustomSelect from "./CustomSelect";
 import CategoryDropdown from "./CategoryDropdown";
-import GenderDropdown from "./GenderDropdown";
+import TagDropdown from "./TagDropdown";
 import SizeDropdown from "./SizeDropdown";
 import ColorsDropdwon from "./ColorsDropdwon";
 import PriceDropdown from "./PriceDropdown";
+import StockToggle from "./StockToggle";
 import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
 import {
-  fetchPublic,
+  buildProductQuery,
   dbProductToShopItem,
+  fetchPublic,
   type DbProduct,
-  type DbCategory,
+  type ProductFacets,
+  type ProductSort,
 } from "@/lib/publicApi";
 import type { Product } from "@/types/product";
 
-const ShopWithSidebar = () => {
-  const [productStyle, setProductStyle] = useState("grid");
+type FilterState = {
+  categoryIds: string[];
+  tags: string[];
+  sizes: string[];
+  colors: string[];
+  price: { from: number; to: number } | null;
+  inStock: boolean;
+  sort: ProductSort;
+};
+
+const DEFAULT_FILTERS: FilterState = {
+  categoryIds: [],
+  tags: [],
+  sizes: [],
+  colors: [],
+  price: null,
+  inStock: false,
+  sort: "latest",
+};
+
+const SORT_OPTIONS = [
+  { label: "Latest products", value: "latest" },
+  { label: "Oldest products", value: "oldest" },
+  { label: "Price: low to high", value: "price-asc" },
+  { label: "Price: high to low", value: "price-desc" },
+];
+
+const csv = (raw: string | null): string[] =>
+  raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+
+const ShopPage = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [productStyle, setProductStyle] = useState<"grid" | "list">("grid");
   const [productSidebar, setProductSidebar] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const [shopData, setShopData] = useState<Product[]>([]);
-  const [activeCategoryName, setActiveCategoryName] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const categorySlug = searchParams?.get("category") ?? null;
+  const [facets, setFacets] = useState<ProductFacets | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
+  // Bootstrap: load facets, then resolve URL params (incl. ?category=<slug> shorthand) → filters
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        let categoryId: string | null = null;
-        if (categorySlug) {
-          const cats = await fetchPublic<DbCategory[]>("/categories");
-          const match = cats.find((c) => c.slug === categorySlug);
-          categoryId = match?.id ?? null;
-          if (!cancelled) setActiveCategoryName(match?.name ?? categorySlug);
-        } else {
-          if (!cancelled) setActiveCategoryName(null);
+        const f = await fetchPublic<ProductFacets>("/products/facets");
+        if (cancelled) return;
+        setFacets(f);
+
+        const next: FilterState = { ...DEFAULT_FILTERS };
+        const slug = searchParams?.get("category");
+        if (slug) {
+          const cat = f.categories.find((c) => c.slug === slug);
+          if (cat) next.categoryIds = [cat.id];
         }
-        const path = categoryId
-          ? `/products?categoryId=${categoryId}&limit=50`
-          : "/products?limit=50";
-        const rows = await fetchPublic<DbProduct[]>(path);
-        if (!cancelled) setShopData(rows.map(dbProductToShopItem));
+        const idsParam = csv(searchParams?.get("categoryIds") ?? null);
+        if (idsParam.length > 0) next.categoryIds = idsParam;
+
+        next.tags = csv(searchParams?.get("tags") ?? null);
+        next.sizes = csv(searchParams?.get("sizes") ?? null);
+        next.colors = csv(searchParams?.get("colors") ?? null);
+        const minP = searchParams?.get("minPrice");
+        const maxP = searchParams?.get("maxPrice");
+        if (minP || maxP) {
+          next.price = {
+            from: minP ? Number(minP) : f.priceRange.min,
+            to: maxP ? Number(maxP) : f.priceRange.max,
+          };
+        }
+        next.inStock = searchParams?.get("inStock") === "true";
+        const sortParam = searchParams?.get("sort") as ProductSort | null;
+        if (
+          sortParam &&
+          ["latest", "oldest", "price-asc", "price-desc"].includes(sortParam)
+        ) {
+          next.sort = sortParam;
+        }
+
+        setFilters(next);
+        setBootstrapped(true);
       } catch {
-        if (!cancelled) setShopData([]);
+        if (!cancelled) {
+          setFacets({
+            categories: [],
+            sizes: [],
+            colors: [],
+            tags: [],
+            priceRange: { min: 0, max: 0 },
+          });
+          setBootstrapped(true);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [categorySlug]);
+    // run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleStickyMenu = () => {
-    if (window.scrollY >= 80) {
-      setStickyMenu(true);
-    } else {
-      setStickyMenu(false);
-    }
-  };
-
-  const options = [
-    { label: "Latest Products", value: "0" },
-    { label: "Best Selling", value: "1" },
-    { label: "Old Products", value: "2" },
-  ];
-
-  const categories = [
-    {
-      name: "Desktop",
-      products: 10,
-      isRefined: true,
-    },
-    {
-      name: "Laptop",
-      products: 12,
-      isRefined: false,
-    },
-    {
-      name: "Monitor",
-      products: 30,
-      isRefined: false,
-    },
-    {
-      name: "UPS",
-      products: 23,
-      isRefined: false,
-    },
-    {
-      name: "Phone",
-      products: 10,
-      isRefined: false,
-    },
-    {
-      name: "Watch",
-      products: 13,
-      isRefined: false,
-    },
-  ];
-
-  const genders = [
-    {
-      name: "Men",
-      products: 10,
-    },
-    {
-      name: "Women",
-      products: 23,
-    },
-    {
-      name: "Unisex",
-      products: 8,
-    },
-  ];
-
+  // Sync URL whenever filters change (after bootstrap)
   useEffect(() => {
-    window.addEventListener("scroll", handleStickyMenu);
+    if (!bootstrapped) return;
+    const params = new URLSearchParams();
+    if (filters.categoryIds.length)
+      params.set("categoryIds", filters.categoryIds.join(","));
+    if (filters.tags.length) params.set("tags", filters.tags.join(","));
+    if (filters.sizes.length) params.set("sizes", filters.sizes.join(","));
+    if (filters.colors.length) params.set("colors", filters.colors.join(","));
+    if (
+      filters.price &&
+      facets &&
+      (filters.price.from > facets.priceRange.min ||
+        filters.price.to < facets.priceRange.max)
+    ) {
+      params.set("minPrice", String(filters.price.from));
+      params.set("maxPrice", String(filters.price.to));
+    }
+    if (filters.inStock) params.set("inStock", "true");
+    if (filters.sort !== "latest") params.set("sort", filters.sort);
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
+  }, [filters, bootstrapped, facets, router]);
 
-    // closing sidebar while clicking outside
-    function handleClickOutside(event) {
-      if (!event.target.closest(".sidebar-content")) {
-        setProductSidebar(false);
+  // Refetch products on filter change
+  useEffect(() => {
+    if (!bootstrapped) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const qs = buildProductQuery({
+          categoryIds: filters.categoryIds,
+          tags: filters.tags,
+          sizes: filters.sizes,
+          colors: filters.colors,
+          minPrice:
+            facets && filters.price && filters.price.from > facets.priceRange.min
+              ? filters.price.from
+              : undefined,
+          maxPrice:
+            facets && filters.price && filters.price.to < facets.priceRange.max
+              ? filters.price.to
+              : undefined,
+          inStock: filters.inStock,
+          sort: filters.sort,
+          limit: 50,
+        });
+        const rows = await fetchPublic<DbProduct[]>(`/products${qs}`);
+        if (!cancelled) setShopData(rows.map(dbProductToShopItem));
+      } catch {
+        if (!cancelled) setShopData([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
-
-    if (productSidebar) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
+    })();
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      cancelled = true;
     };
-  });
+  }, [filters, facets, bootstrapped]);
+
+  // Sticky menu
+  useEffect(() => {
+    const handler = () => setStickyMenu(window.scrollY >= 80);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  // Click-outside for mobile sidebar
+  useEffect(() => {
+    if (!productSidebar) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".sidebar-content")) setProductSidebar(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [productSidebar]);
+
+  const toggleArr = useCallback(
+    (key: "categoryIds" | "tags" | "sizes" | "colors", value: string) => {
+      setFilters((prev) => {
+        const cur = prev[key];
+        const next = cur.includes(value)
+          ? cur.filter((v) => v !== value)
+          : [...cur, value];
+        return { ...prev, [key]: next };
+      });
+    },
+    [],
+  );
+
+  const setPrice = useCallback((next: { from: number; to: number }) => {
+    setFilters((prev) => ({ ...prev, price: next }));
+  }, []);
+
+  const setInStock = useCallback((next: boolean) => {
+    setFilters((prev) => ({ ...prev, inStock: next }));
+  }, []);
+
+  const setSort = useCallback((next: string) => {
+    setFilters((prev) => ({ ...prev, sort: next as ProductSort }));
+  }, []);
+
+  const cleanAll = useCallback(() => {
+    setFilters({
+      ...DEFAULT_FILTERS,
+      price: facets
+        ? { from: facets.priceRange.min, to: facets.priceRange.max }
+        : null,
+    });
+  }, [facets]);
+
+  const activeFilterCount = useMemo(() => {
+    let n =
+      filters.categoryIds.length +
+      filters.tags.length +
+      filters.sizes.length +
+      filters.colors.length +
+      (filters.inStock ? 1 : 0);
+    if (
+      facets &&
+      filters.price &&
+      (filters.price.from > facets.priceRange.min ||
+        filters.price.to < facets.priceRange.max)
+    ) {
+      n += 1;
+    }
+    return n;
+  }, [filters, facets]);
+
+  const headerLabel = useMemo(() => {
+    if (filters.categoryIds.length === 1 && facets) {
+      const cat = facets.categories.find(
+        (c) => c.id === filters.categoryIds[0],
+      );
+      if (cat) return cat.name;
+    }
+    return "Explore all accessories";
+  }, [filters.categoryIds, facets]);
 
   return (
     <>
       <Breadcrumb
-        title={"Explore All Products"}
+        title={headerLabel}
         pages={["shop", "/", "shop with sidebar"]}
       />
       <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28 bg-[#f3f4f6]">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
           <div className="flex gap-7.5">
-            {/* <!-- Sidebar Start --> */}
+            {/* Sidebar */}
             <div
               className={`sidebar-content fixed xl:z-1 z-9999 left-0 top-0 xl:translate-x-0 xl:static max-w-[310px] xl:max-w-[270px] w-full ease-out duration-200 ${
                 productSidebar
@@ -186,48 +316,86 @@ const ShopWithSidebar = () => {
 
               <form onSubmit={(e) => e.preventDefault()}>
                 <div className="flex flex-col gap-6">
-                  {/* <!-- filter box --> */}
                   <div className="bg-white shadow-1 rounded-lg py-4 px-5">
                     <div className="flex items-center justify-between">
-                      <p>Filters:</p>
-                      <button className="text-blue">Clean All</button>
+                      <p>
+                        Filters
+                        {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                        :
+                      </p>
+                      <button
+                        type="button"
+                        onClick={cleanAll}
+                        className="text-blue hover:underline disabled:opacity-50"
+                        disabled={activeFilterCount === 0}
+                      >
+                        Clear all
+                      </button>
                     </div>
                   </div>
 
-                  {/* <!-- category box --> */}
-                  <CategoryDropdown categories={categories} />
+                  {facets && (
+                    <>
+                      <CategoryDropdown
+                        categories={facets.categories}
+                        selected={filters.categoryIds}
+                        onToggle={(id) => toggleArr("categoryIds", id)}
+                      />
 
-                  {/* <!-- gender box --> */}
-                  <GenderDropdown genders={genders} />
+                      <TagDropdown
+                        tags={facets.tags}
+                        selected={filters.tags}
+                        onToggle={(v) => toggleArr("tags", v)}
+                      />
 
-                  {/* // <!-- size box --> */}
-                  <SizeDropdown />
+                      <SizeDropdown
+                        sizes={facets.sizes}
+                        selected={filters.sizes}
+                        onToggle={(v) => toggleArr("sizes", v)}
+                      />
 
-                  {/* // <!-- color box --> */}
-                  <ColorsDropdwon />
+                      <ColorsDropdwon
+                        colors={facets.colors}
+                        selected={filters.colors}
+                        onToggle={(v) => toggleArr("colors", v)}
+                      />
 
-                  {/* // <!-- price range box --> */}
-                  <PriceDropdown />
+                      <PriceDropdown
+                        min={facets.priceRange.min}
+                        max={facets.priceRange.max}
+                        value={
+                          filters.price ?? {
+                            from: facets.priceRange.min,
+                            to: facets.priceRange.max,
+                          }
+                        }
+                        onChange={setPrice}
+                      />
+
+                      <StockToggle value={filters.inStock} onChange={setInStock} />
+                    </>
+                  )}
                 </div>
               </form>
             </div>
-            {/* // <!-- Sidebar End --> */}
 
-            {/* // <!-- Content Start --> */}
+            {/* Content */}
             <div className="xl:max-w-[870px] w-full">
               <div className="rounded-lg bg-white shadow-1 pl-3 pr-2.5 py-2.5 mb-6">
                 <div className="flex items-center justify-between">
-                  {/* <!-- top bar left --> */}
                   <div className="flex flex-wrap items-center gap-4">
-                    <CustomSelect options={options} />
-
+                    <CustomSelect
+                      options={SORT_OPTIONS}
+                      value={filters.sort}
+                      onChange={setSort}
+                    />
                     <p>
-                      Showing <span className="text-dark">9 of 50</span>{" "}
-                      Products
+                      Showing{" "}
+                      <span className="text-dark">{shopData.length}</span>{" "}
+                      product{shopData.length === 1 ? "" : "s"}
                     </p>
                   </div>
 
-                  {/* <!-- top bar right --> */}
                   <div className="flex items-center gap-2.5">
                     <button
                       onClick={() => setProductStyle("grid")}
@@ -308,143 +476,40 @@ const ShopWithSidebar = () => {
                 </div>
               </div>
 
-              {/* <!-- Products Grid Tab Content Start --> */}
-              <div
-                className={`${
-                  productStyle === "grid"
-                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-7.5 gap-y-9"
-                    : "flex flex-col gap-7.5"
-                }`}
-              >
-                {shopData.map((item, key) =>
-                  productStyle === "grid" ? (
-                    <SingleGridItem item={item} key={key} />
-                  ) : (
-                    <SingleListItem item={item} key={key} />
-                  )
-                )}
-              </div>
-              {/* <!-- Products Grid Tab Content End --> */}
-
-              {/* <!-- Products Pagination Start --> */}
-              <div className="flex justify-center mt-15">
-                <div className="bg-white shadow-1 rounded-md p-2">
-                  <ul className="flex items-center">
-                    <li>
-                      <button
-                        id="paginationLeft"
-                        aria-label="button for pagination left"
-                        type="button"
-                        disabled
-                        className="flex items-center justify-center w-8 h-9 ease-out duration-200 rounded-[3px disabled:text-gray-4"
-                      >
-                        <svg
-                          className="fill-current"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M12.1782 16.1156C12.0095 16.1156 11.8407 16.0594 11.7282 15.9187L5.37197 9.45C5.11885 9.19687 5.11885 8.80312 5.37197 8.55L11.7282 2.08125C11.9813 1.82812 12.3751 1.82812 12.6282 2.08125C12.8813 2.33437 12.8813 2.72812 12.6282 2.98125L6.72197 9L12.6563 15.0187C12.9095 15.2719 12.9095 15.6656 12.6563 15.9187C12.4876 16.0312 12.347 16.1156 12.1782 16.1156Z"
-                            fill=""
-                          />
-                        </svg>
-                      </button>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] bg-blue text-white hover:text-white hover:bg-blue"
-                      >
-                        1
-                      </a>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
-                      >
-                        2
-                      </a>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
-                      >
-                        3
-                      </a>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
-                      >
-                        4
-                      </a>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
-                      >
-                        5
-                      </a>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
-                      >
-                        ...
-                      </a>
-                    </li>
-
-                    <li>
-                      <a
-                        href="#"
-                        className="flex py-1.5 px-3.5 duration-200 rounded-[3px] hover:text-white hover:bg-blue"
-                      >
-                        10
-                      </a>
-                    </li>
-
-                    <li>
-                      <button
-                        id="paginationLeft"
-                        aria-label="button for pagination left"
-                        type="button"
-                        className="flex items-center justify-center w-8 h-9 ease-out duration-200 rounded-[3px] hover:text-white hover:bg-blue disabled:text-gray-4"
-                      >
-                        <svg
-                          className="fill-current"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M5.82197 16.1156C5.65322 16.1156 5.5126 16.0594 5.37197 15.9469C5.11885 15.6937 5.11885 15.3 5.37197 15.0469L11.2782 9L5.37197 2.98125C5.11885 2.72812 5.11885 2.33437 5.37197 2.08125C5.6251 1.82812 6.01885 1.82812 6.27197 2.08125L12.6282 8.55C12.8813 8.80312 12.8813 9.19687 12.6282 9.45L6.27197 15.9187C6.15947 16.0312 5.99072 16.1156 5.82197 16.1156Z"
-                            fill=""
-                          />
-                        </svg>
-                      </button>
-                    </li>
-                  </ul>
+              {/* Products */}
+              {loading ? (
+                <div className="flex items-center justify-center py-20 text-dark-4">
+                  Loading products...
                 </div>
-              </div>
-              {/* <!-- Products Pagination End --> */}
+              ) : shopData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <p className="text-lg text-dark">No products match your filters</p>
+                  <button
+                    type="button"
+                    onClick={cleanAll}
+                    className="text-blue hover:underline"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className={`${
+                    productStyle === "grid"
+                      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-7.5 gap-y-9"
+                      : "flex flex-col gap-7.5"
+                  }`}
+                >
+                  {shopData.map((item) =>
+                    productStyle === "grid" ? (
+                      <SingleGridItem item={item} key={item.id} />
+                    ) : (
+                      <SingleListItem item={item} key={item.id} />
+                    ),
+                  )}
+                </div>
+              )}
             </div>
-            {/* // <!-- Content End --> */}
           </div>
         </div>
       </section>
@@ -452,4 +517,4 @@ const ShopWithSidebar = () => {
   );
 };
 
-export default ShopWithSidebar;
+export default ShopPage;
