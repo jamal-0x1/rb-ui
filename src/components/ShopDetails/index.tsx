@@ -19,6 +19,7 @@ import {
 } from "@/lib/reviewsApi";
 import { useCurrentUser } from "@/lib/userAuth";
 import type { Product, ProductVariantInfo } from "@/types/product";
+import { toast } from "sonner";
 
 const COLOR_HEX: Record<string, string> = {
   Black: "#111",
@@ -228,12 +229,14 @@ const ShopDetails = () => {
   const handleAddToCart = () => {
     if (!inStock) return;
     dispatch(addItemToCart(buildCartPayload() as never));
+    toast.success(`Added to cart — ${product.title}`);
     openCartModal();
   };
 
   const handleBuyNow = () => {
     if (!inStock) return;
     dispatch(addItemToCart(buildCartPayload() as never));
+    toast.success(`Added to cart — ${product.title}`);
     router.push("/checkout");
   };
 
@@ -245,6 +248,7 @@ const ShopDetails = () => {
         quantity: 1,
       } as never),
     );
+    toast.success(`Added to wishlist — ${product.title}`);
   };
 
   if (!product || !product.title) {

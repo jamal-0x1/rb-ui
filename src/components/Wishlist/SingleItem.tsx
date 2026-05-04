@@ -6,6 +6,7 @@ import { removeItemFromWishlist } from "@/redux/features/wishlist-slice";
 import { addItemToCart } from "@/redux/features/cart-slice";
 
 import Image from "next/image";
+import { toast } from "sonner";
 
 const SingleItem = ({ item }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -21,6 +22,7 @@ const SingleItem = ({ item }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to cart — ${item.title}`);
   };
 
   return (

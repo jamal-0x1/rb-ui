@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -60,11 +60,19 @@ const STATUS_STYLES: Record<string, string> = {
   refunded: "bg-gray-200 text-dark-3",
 };
 
+const VALID_TABS: TabKey[] = ["dashboard", "orders", "addresses", "profile"];
+
 const MyAccount = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: userLoading } = useCurrentUser();
 
-  const [activeTab, setActiveTab] = useState<TabKey>("dashboard");
+  const initialTab = (() => {
+    const t = searchParams.get("tab") as TabKey | null;
+    return t && VALID_TABS.includes(t) ? t : "dashboard";
+  })();
+
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(false);

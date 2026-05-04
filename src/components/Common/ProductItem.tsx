@@ -10,6 +10,7 @@ import { updateproductDetails } from "@/redux/features/product-details";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
+import { toast } from "sonner";
 
 const ProductItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
@@ -29,6 +30,7 @@ const ProductItem = ({ item }: { item: Product }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to cart — ${item.title}`);
   };
 
   const handleItemToWishList = () => {
@@ -39,6 +41,7 @@ const ProductItem = ({ item }: { item: Product }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to wishlist — ${item.title}`);
   };
 
   const handleProductDetails = () => {

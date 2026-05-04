@@ -9,6 +9,7 @@ import { addItemToCart } from "@/redux/features/cart-slice";
 import Image from "next/image";
 import Link from "next/link";
 import { addItemToWishlist } from "@/redux/features/wishlist-slice";
+import { toast } from "sonner";
 
 const SingleItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
@@ -27,6 +28,7 @@ const SingleItem = ({ item }: { item: Product }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to cart — ${item.title}`);
   };
 
   const handleItemToWishList = () => {
@@ -37,6 +39,7 @@ const SingleItem = ({ item }: { item: Product }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to wishlist — ${item.title}`);
   };
 
   return (

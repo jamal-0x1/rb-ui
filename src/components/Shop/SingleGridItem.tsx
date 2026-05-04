@@ -9,6 +9,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 
 const SingleGridItem = ({ item }: { item: Product }) => {
   const { openModal } = useModalContext();
@@ -28,6 +29,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to cart — ${item.title}`);
   };
 
   const handleItemToWishList = () => {
@@ -38,6 +40,7 @@ const SingleGridItem = ({ item }: { item: Product }) => {
         quantity: 1,
       })
     );
+    toast.success(`Added to wishlist — ${item.title}`);
   };
 
   return (

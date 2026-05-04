@@ -17,22 +17,25 @@ export type ContactInfo = {
 };
 
 export const CONTACT: ContactInfo = {
-  address: "685 Market Street, Las Vegas, LA 95820, United States.",
-  phone: "(+099) 532-786-9843",
-  email: "support@example.com",
+  address: "House 12, Road 7, Dhanmondi, Dhaka 1205, Bangladesh.",
+  phone: "+880 1872-570727",
+  email: "support@orbitalmind.xyz",
 };
 
 export const SOCIAL_LINKS: SocialLink[] = [];
 
 export const ACCOUNT_LINKS: FooterLink[] = [
   { label: "My Account", href: "/my-account" },
+  { label: "Orders", href: "/my-account?tab=orders" },
+  { label: "Addresses", href: "/my-account?tab=addresses" },
   { label: "Sign In", href: "/signin" },
   { label: "Register", href: "/signup" },
-  { label: "Cart", href: "/cart" },
-  { label: "Wishlist", href: "/wishlist" },
-  { label: "Shop", href: "/shop" },
 ];
 
 export const QUICK_LINKS: FooterLink[] = [
+  { label: "Shop", href: "/shop" },
+  { label: "Cart", href: "/cart" },
+  { label: "Wishlist", href: "/wishlist" },
+  { label: "Checkout", href: "/checkout" },
   { label: "Contact", href: "/contact" },
 ];

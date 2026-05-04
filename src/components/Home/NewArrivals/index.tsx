@@ -14,7 +14,7 @@ const NewArrival = () => {
   const [shopData, setShopData] = useState<Product[]>([]);
 
   useEffect(() => {
-    fetchPublic<DbProduct[]>("/products?limit=8")
+    fetchPublic<DbProduct[]>("/products?limit=12")
       .then((rows) => setShopData(rows.map(dbProductToShopItem)))
       .catch(() => setShopData([]));
   }, []);

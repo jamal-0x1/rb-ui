@@ -186,9 +186,12 @@ const Header = () => {
                 <span className="block text-2xs text-dark-4 uppercase">
                   24/7 SUPPORT
                 </span>
-                <p className="font-medium text-custom-sm text-dark">
-                  (+965) 7492-3477
-                </p>
+                <a
+                  href="tel:+8801872570727"
+                  className="font-medium text-custom-sm text-dark hover:text-blue"
+                >
+                  +880 1872-570727
+                </a>
               </div>
             </div>
 
