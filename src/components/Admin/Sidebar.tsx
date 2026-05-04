@@ -123,7 +123,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const dashActive = pathname === dashHref || pathname === "/admin";
 
   return (
-    <aside className="w-64 h-full bg-slate-900 text-slate-100 flex flex-col">
+    <aside className="w-64 h-full max-h-screen bg-slate-900 text-slate-100 flex flex-col">
       <div className="px-5 py-4 border-b border-slate-800">
         <Link
           href="/admin"
