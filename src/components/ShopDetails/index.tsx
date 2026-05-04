@@ -339,7 +339,7 @@ const ShopDetails = () => {
               <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
                 <button
                   type="button"
-                  onClick={() => openPreviewModal()}
+                  onClick={() => openPreviewModal(previewImg)}
                   aria-label="zoom"
                   className="w-11 h-11 rounded-[5px] bg-gray-1 shadow-1 flex items-center justify-center text-dark hover:text-blue absolute top-4 right-4 z-10"
                 >
