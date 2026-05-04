@@ -90,25 +90,40 @@ export default function OrderSuccessPage({
                     <span className="font-medium text-dark">Item</span>
                     <span className="font-medium text-dark">Subtotal</span>
                   </div>
-                  {order.items.map((it) => (
-                    <div
-                      key={it.id}
-                      className="px-5 py-3 border-b border-gray-3 flex justify-between gap-4"
-                    >
-                      <span className="text-dark">
-                        {it.productNameSnapshot}
-                        {it.quantity > 1 && (
-                          <span className="text-dark-4 text-custom-sm">
-                            {" "}
-                            × {it.quantity}
+                  {order.items.map((it) => {
+                    const variantLine = [it.variant?.color, it.variant?.size]
+                      .filter(Boolean)
+                      .join(" · ");
+                    return (
+                      <div
+                        key={it.id}
+                        className="px-5 py-3 border-b border-gray-3 flex justify-between gap-4"
+                      >
+                        <div className="flex-1">
+                          <span className="text-dark">
+                            {it.productNameSnapshot}
+                            {it.quantity > 1 && (
+                              <span className="text-dark-4 text-custom-sm">
+                                {" "}
+                                × {it.quantity}
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </span>
-                      <span className="text-dark">
-                        {formatBDT(it.lineTotal)}
-                      </span>
-                    </div>
-                  ))}
+                          {variantLine && (
+                            <p className="text-xs text-dark-4 mt-0.5 text-left">
+                              {variantLine}
+                            </p>
+                          )}
+                          <p className="text-[10px] font-mono text-dark-4/70 mt-0.5 text-left">
+                            {it.variantSkuSnapshot}
+                          </p>
+                        </div>
+                        <span className="text-dark">
+                          {formatBDT(it.lineTotal)}
+                        </span>
+                      </div>
+                    );
+                  })}
                   <div className="px-5 py-3 border-b border-gray-3 flex justify-between text-dark-4">
                     <span>Subtotal</span>
                     <span>{formatBDT(order.subtotal)}</span>

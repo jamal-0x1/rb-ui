@@ -14,18 +14,22 @@ const SingleItem = ({ item }) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const handleRemoveFromCart = () => {
-    dispatch(removeItemFromCart(item.id));
+    dispatch(removeItemFromCart(item.lineId));
   };
 
   const handleIncreaseQuantity = () => {
     setQuantity(quantity + 1);
-    dispatch(updateCartItemQuantity({ id: item.id, quantity: quantity + 1 }));
+    dispatch(
+      updateCartItemQuantity({ lineId: item.lineId, quantity: quantity + 1 }),
+    );
   };
 
   const handleDecreaseQuantity = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
-      dispatch(updateCartItemQuantity({ id: item.id, quantity: quantity - 1 }));
+      dispatch(
+        updateCartItemQuantity({ lineId: item.lineId, quantity: quantity - 1 }),
+      );
     } else {
       return;
     }
@@ -44,6 +48,18 @@ const SingleItem = ({ item }) => {
               <h3 className="text-dark ease-out duration-200 hover:text-blue">
                 <a href="#"> {item.title} </a>
               </h3>
+              {(item.variantColor || item.variantSize) && (
+                <p className="text-xs text-dark-4 mt-0.5">
+                  {[item.variantColor, item.variantSize]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
+              {item.variantSku && (
+                <p className="text-[10px] font-mono text-dark-4/70 mt-0.5">
+                  {item.variantSku}
+                </p>
+              )}
             </div>
           </div>
         </div>

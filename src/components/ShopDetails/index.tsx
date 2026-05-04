@@ -140,14 +140,75 @@ const ShopDetails = () => {
     return match ?? variants[0];
   }, [variants, activeColor, activeSize, variantColors.length, variantSizes.length]);
 
+  // Variant-aware gallery: prefer images attached to selected variant, else
+  // product-level (variantId null), else legacy imgs.
+  const gallery = useMemo(() => {
+    const images = product.images ?? [];
+    const variantId = selectedVariant?.id ?? null;
+    const variantImgs = variantId
+      ? images.filter((i) => i.variantId === variantId)
+      : [];
+    const productImgs = images.filter((i) => !i.variantId);
+    const chosen =
+      variantImgs.length > 0
+        ? variantImgs
+        : productImgs.length > 0
+          ? productImgs
+          : images;
+    if (chosen.length > 0) {
+      const urls = chosen.map((i) => i.url);
+      return {
+        previews: urls.slice(0, 4),
+        thumbnails: urls.length > 1 ? urls : urls,
+      };
+    }
+    return product.imgs ?? { previews: [], thumbnails: [] };
+  }, [product.images, product.imgs, selectedVariant?.id]);
+
+  // Reset preview index when variant gallery changes
+  useEffect(() => {
+    setPreviewImg(0);
+  }, [selectedVariant?.id]);
+
   const stockQty = selectedVariant?.inventory?.quantityOnHand ?? 0;
   const inStock = stockQty > 0;
   const lowStock = inStock && stockQty <= 5;
+
+  const displayPrice =
+    selectedVariant?.priceOverride ??
+    product.discountedPrice ??
+    product.price;
+
+  const colorHasStock = (color: string) =>
+    variants.some(
+      (v) => v.color === color && (v.inventory?.quantityOnHand ?? 0) > 0,
+    );
+  const sizeAvailableForActiveColor = (size: string) => {
+    if (!variantColors.length) {
+      return variants.some(
+        (v) => v.size === size && (v.inventory?.quantityOnHand ?? 0) > 0,
+      );
+    }
+    return variants.some(
+      (v) =>
+        v.color === activeColor &&
+        v.size === size &&
+        (v.inventory?.quantityOnHand ?? 0) > 0,
+    );
+  };
 
   // Cap quantity to stock when stock changes
   useEffect(() => {
     if (stockQty > 0 && quantity > stockQty) setQuantity(stockQty);
   }, [stockQty, quantity]);
+
+  // Switch to first available size when active color leaves current size out of stock
+  useEffect(() => {
+    if (!variantSizes.length) return;
+    if (sizeAvailableForActiveColor(activeSize)) return;
+    const next = variantSizes.find((s) => sizeAvailableForActiveColor(s));
+    if (next && next !== activeSize) setActiveSize(next);
+  }, [activeColor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reviews
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
@@ -224,7 +285,12 @@ const ShopDetails = () => {
   const buildCartPayload = () => ({
     ...product,
     variantId: selectedVariant?.id,
+    variantSku: selectedVariant?.sku,
+    variantSize: selectedVariant?.size ?? null,
+    variantColor: selectedVariant?.color ?? null,
     quantity,
+    price: Number(product.price),
+    discountedPrice: Number(displayPrice),
   });
 
   const handleAddToCart = () => {
@@ -286,9 +352,9 @@ const ShopDetails = () => {
                     />
                   </svg>
                 </button>
-                {product.imgs?.previews?.[previewImg] && (
+                {gallery.previews?.[previewImg] && (
                   <Image
-                    src={product.imgs.previews[previewImg]}
+                    src={gallery.previews[previewImg]}
                     alt={product.title}
                     width={400}
                     height={400}
@@ -298,7 +364,7 @@ const ShopDetails = () => {
               </div>
 
               <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
-                {product.imgs?.thumbnails?.map((src, key) => (
+                {gallery.thumbnails?.map((src, key) => (
                   <button
                     type="button"
                     key={key}
@@ -392,14 +458,13 @@ const ShopDetails = () => {
 
               <h3 className="font-medium text-custom-1 mb-4.5">
                 <span className="text-sm sm:text-base text-dark">
-                  Price: {formatBDT(Number(product.price))}
+                  Price: {formatBDT(Number(displayPrice))}
                 </span>
-                {product.discountedPrice &&
-                  product.discountedPrice !== product.price && (
-                    <span className="line-through ml-2 text-dark-4">
-                      {formatBDT(Number(product.discountedPrice))}
-                    </span>
-                  )}
+                {displayPrice !== product.price && (
+                  <span className="line-through ml-2 text-dark-4">
+                    {formatBDT(Number(product.price))}
+                  </span>
+                )}
               </h3>
 
               {(product.shortDescription || product.description) && (
@@ -415,24 +480,28 @@ const ShopDetails = () => {
                       <h4 className="font-medium text-dark">Color:</h4>
                     </div>
                     <div className="flex items-center gap-2.5">
-                      {variantColors.map((color) => (
-                        <button
-                          type="button"
-                          key={color}
-                          onClick={() => setActiveColor(color)}
-                          title={color}
-                          className={`flex items-center justify-center w-6 h-6 rounded-full border-2 transition-colors ${
-                            activeColor === color
-                              ? "border-blue"
-                              : "border-transparent"
-                          }`}
-                        >
-                          <span
-                            className="block w-4 h-4 rounded-full ring-1 ring-gray-3"
-                            style={{ backgroundColor: colorSwatch(color) }}
-                          />
-                        </button>
-                      ))}
+                      {variantColors.map((color) => {
+                        const available = colorHasStock(color);
+                        return (
+                          <button
+                            type="button"
+                            key={color}
+                            onClick={() => available && setActiveColor(color)}
+                            disabled={!available}
+                            title={available ? color : `${color} — out of stock`}
+                            className={`flex items-center justify-center w-6 h-6 rounded-full border-2 transition-colors ${
+                              activeColor === color
+                                ? "border-blue"
+                                : "border-transparent"
+                            } ${!available ? "opacity-40 cursor-not-allowed" : ""}`}
+                          >
+                            <span
+                              className="block w-4 h-4 rounded-full ring-1 ring-gray-3"
+                              style={{ backgroundColor: colorSwatch(color) }}
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -443,20 +512,27 @@ const ShopDetails = () => {
                       <h4 className="font-medium text-dark">Size:</h4>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      {variantSizes.map((s) => (
-                        <button
-                          type="button"
-                          key={s}
-                          onClick={() => setActiveSize(s)}
-                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                            activeSize === s
-                              ? "border-blue bg-blue text-white"
-                              : "border-gray-4 text-dark hover:border-blue"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
+                      {variantSizes.map((s) => {
+                        const available = sizeAvailableForActiveColor(s);
+                        return (
+                          <button
+                            type="button"
+                            key={s}
+                            onClick={() => available && setActiveSize(s)}
+                            disabled={!available}
+                            title={
+                              available ? s : `${s} — out of stock for ${activeColor || "this product"}`
+                            }
+                            className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                              activeSize === s
+                                ? "border-blue bg-blue text-white"
+                                : "border-gray-4 text-dark hover:border-blue"
+                            } ${!available ? "opacity-40 line-through cursor-not-allowed" : ""}`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

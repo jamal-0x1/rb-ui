@@ -78,9 +78,9 @@ const CartSidebarModal = () => {
             <div className="flex flex-col gap-6">
               {/* <!-- cart item --> */}
               {cartItems.length > 0 ? (
-                cartItems.map((item, key) => (
+                cartItems.map((item) => (
                   <SingleItem
-                    key={key}
+                    key={item.lineId}
                     item={item}
                     removeItemFromCart={removeItemFromCart}
                   />

@@ -6,8 +6,12 @@ type InitialState = {
 };
 
 type CartItem = {
+  lineId: string;
   id: number | string;
   variantId?: string;
+  variantSku?: string;
+  variantSize?: string | null;
+  variantColor?: string | null;
   title: string;
   price: number;
   discountedPrice: number;
@@ -17,6 +21,11 @@ type CartItem = {
     previews: string[];
   };
 };
+
+export const makeLineId = (
+  id: string | number,
+  variantId?: string | null,
+): string => `${id}:${variantId ?? "_"}`;
 
 const initialState: InitialState = {
   items: [],
@@ -28,23 +37,44 @@ export const cart = createSlice({
   reducers: {
     addItemToCart: (
       state,
-      action: PayloadAction<CartItem & { variants?: Array<{ id: string }> }>,
-    ) => {
-      const { id, title, price, quantity, discountedPrice, imgs, variants } =
-        action.payload;
-      const variantId =
-        action.payload.variantId ?? variants?.[0]?.id;
-      const existingItem = state.items.find((item) => item.id === id);
-
-      if (existingItem) {
-        existingItem.quantity += quantity;
-        if (!existingItem.variantId && variantId) {
-          existingItem.variantId = variantId;
+      action: PayloadAction<
+        Omit<CartItem, "lineId"> & {
+          variants?: Array<{
+            id: string;
+            sku?: string;
+            size?: string | null;
+            color?: string | null;
+          }>;
         }
+      >,
+    ) => {
+      const {
+        id,
+        title,
+        price,
+        quantity,
+        discountedPrice,
+        imgs,
+        variants,
+        variantSku,
+        variantSize,
+        variantColor,
+      } = action.payload;
+      const variantId = action.payload.variantId ?? variants?.[0]?.id;
+      const fallback = variants?.find((v) => v.id === variantId);
+      const lineId = makeLineId(id, variantId);
+      const existing = state.items.find((item) => item.lineId === lineId);
+
+      if (existing) {
+        existing.quantity += quantity;
       } else {
         state.items.push({
+          lineId,
           id,
           variantId,
+          variantSku: variantSku ?? fallback?.sku,
+          variantSize: variantSize ?? fallback?.size ?? null,
+          variantColor: variantColor ?? fallback?.color ?? null,
           title,
           price,
           quantity,
@@ -53,28 +83,40 @@ export const cart = createSlice({
         });
       }
     },
-    removeItemFromCart: (state, action: PayloadAction<number | string>) => {
-      const itemId = action.payload;
-      state.items = state.items.filter((item) => item.id !== itemId);
+    removeItemFromCart: (state, action: PayloadAction<string>) => {
+      const lineId = action.payload;
+      state.items = state.items.filter((item) => item.lineId !== lineId);
     },
     updateCartItemQuantity: (
       state,
-      action: PayloadAction<{ id: number | string; quantity: number }>
+      action: PayloadAction<{ lineId: string; quantity: number }>,
     ) => {
-      const { id, quantity } = action.payload;
-      const existingItem = state.items.find((item) => item.id === id);
-
-      if (existingItem) {
-        existingItem.quantity = quantity;
-      }
+      const { lineId, quantity } = action.payload;
+      const existing = state.items.find((item) => item.lineId === lineId);
+      if (existing) existing.quantity = quantity;
     },
 
     removeAllItemsFromCart: (state) => {
       state.items = [];
     },
 
-    hydrateCart: (state, action: PayloadAction<CartItem[]>) => {
-      state.items = action.payload;
+    hydrateCart: (
+      state,
+      action: PayloadAction<Array<Partial<CartItem> & { id: string | number }>>,
+    ) => {
+      state.items = action.payload.map((raw) => ({
+        lineId: raw.lineId ?? makeLineId(raw.id, raw.variantId),
+        id: raw.id,
+        variantId: raw.variantId,
+        variantSku: raw.variantSku,
+        variantSize: raw.variantSize ?? null,
+        variantColor: raw.variantColor ?? null,
+        title: raw.title ?? "",
+        price: raw.price ?? 0,
+        discountedPrice: raw.discountedPrice ?? raw.price ?? 0,
+        quantity: raw.quantity ?? 1,
+        imgs: raw.imgs,
+      }));
     },
   },
 });

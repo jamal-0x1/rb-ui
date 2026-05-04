@@ -7,7 +7,7 @@ const SingleItem = ({ item, removeItemFromCart }) => {
   const dispatch = useDispatch<AppDispatch>();
 
   const handleRemoveFromCart = () => {
-    dispatch(removeItemFromCart(item.id));
+    dispatch(removeItemFromCart(item.lineId));
   };
 
   return (
@@ -21,7 +21,14 @@ const SingleItem = ({ item, removeItemFromCart }) => {
           <h3 className="font-medium text-dark mb-1 ease-out duration-200 hover:text-blue">
             <a href="#"> {item.title} </a>
           </h3>
-          <p className="text-custom-sm">Price: ${item.discountedPrice}</p>
+          {(item.variantColor || item.variantSize) && (
+            <p className="text-[11px] text-dark-4 mb-0.5">
+              {[item.variantColor, item.variantSize]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+          <p className="text-custom-sm">৳{item.discountedPrice}</p>
         </div>
       </div>
 

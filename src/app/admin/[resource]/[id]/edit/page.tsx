@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProductImageManager } from "@/components/Admin/ProductImageManager";
 import { CategoryImageManager } from "@/components/Admin/CategoryImageManager";
 import { AttributesEditor } from "@/components/Admin/AttributesEditor";
+import { VariantMatrixManager } from "@/components/Admin/VariantMatrixManager";
 
 type Row = Record<string, any>;
 
@@ -268,7 +269,7 @@ export default function ResourceEditPage() {
 
       {(resource.slug === "products" || resource.slug === "categories") && row ? (
         <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-6">
+          <div className="lg:sticky lg:top-6 space-y-4">
             {resource.slug === "products" && (
               <ProductImageManager productId={params.id} />
             )}
@@ -279,6 +280,10 @@ export default function ResourceEditPage() {
         </div>
       ) : null}
       </div>
+
+      {resource.slug === "products" && row ? (
+        <VariantMatrixManager productId={params.id} />
+      ) : null}
     </div>
   );
 }

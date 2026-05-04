@@ -20,6 +20,7 @@ export type DbProductImage = {
   altText: string | null;
   isPrimary: boolean;
   sortOrder: number;
+  variantId?: string | null;
 };
 
 export type DbProduct = {
@@ -50,6 +51,7 @@ export type DbProduct = {
     sku: string;
     size: string | null;
     color: string | null;
+    priceOverride: string | null;
     inventory?: { quantityOnHand: number } | null;
   }>;
   tags?: Array<{ tag: { id: string; name: string } }>;
@@ -98,11 +100,19 @@ export function dbProductToShopItem(p: DbProduct): Product {
       sku: v.sku,
       size: v.size,
       color: v.color,
+      priceOverride: v.priceOverride != null ? Number(v.priceOverride) : null,
       inventory: v.inventory ?? null,
     })),
     tags: (p.tags ?? []).map((t) => t.tag.name),
     inStock: p.active,
     reviewStats: p.reviewStats,
+    images: sortedImages.map((i) => ({
+      url: resolveAsset(i.url),
+      altText: i.altText,
+      isPrimary: i.isPrimary,
+      sortOrder: i.sortOrder,
+      variantId: i.variantId ?? null,
+    })),
     imgs: {
       previews: previews.length > 0 ? previews : ["/images/products/product-1-bg-1.png"],
       thumbnails: thumbnails.length > 0 ? thumbnails : previews,

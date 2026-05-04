@@ -237,18 +237,27 @@ const Checkout = () => {
                     ) : (
                       cartItems.map((item) => (
                         <div
-                          key={item.id}
-                          className="flex items-center justify-between py-5 border-b border-gray-3 gap-4"
+                          key={item.lineId}
+                          className="flex items-start justify-between py-5 border-b border-gray-3 gap-4"
                         >
-                          <p className="text-dark flex-1 line-clamp-2">
-                            {item.title}
-                            {item.quantity > 1 && (
-                              <span className="text-dark-4 text-custom-sm">
-                                {" "}
-                                × {item.quantity}
-                              </span>
+                          <div className="flex-1">
+                            <p className="text-dark line-clamp-2">
+                              {item.title}
+                              {item.quantity > 1 && (
+                                <span className="text-dark-4 text-custom-sm">
+                                  {" "}
+                                  × {item.quantity}
+                                </span>
+                              )}
+                            </p>
+                            {(item.variantColor || item.variantSize) && (
+                              <p className="text-xs text-dark-4 mt-0.5">
+                                {[item.variantColor, item.variantSize]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </p>
                             )}
-                          </p>
+                          </div>
                           <p className="text-dark text-right">
                             {formatBDT(item.discountedPrice * item.quantity)}
                           </p>

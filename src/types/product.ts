@@ -3,7 +3,16 @@ export type ProductVariantInfo = {
   sku: string;
   size: string | null;
   color: string | null;
+  priceOverride: number | null;
   inventory?: { quantityOnHand: number } | null;
+};
+
+export type ProductImageInfo = {
+  url: string;
+  altText: string | null;
+  isPrimary: boolean;
+  sortOrder: number;
+  variantId: string | null;
 };
 
 export type ReviewStats = {
@@ -34,6 +43,7 @@ export type Product = {
   tags?: string[];
   inStock?: boolean;
   reviewStats?: ReviewStats;
+  images?: ProductImageInfo[];
   imgs?: {
     thumbnails: string[];
     previews: string[];

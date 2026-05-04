@@ -8,6 +8,17 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    { pattern: /bg-gradient-to-(r|l|t|b|tr|tl|br|bl)/ },
+    {
+      pattern:
+        /(from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(400|500|600)/,
+    },
+    {
+      pattern:
+        /shadow-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-500\/\d+/,
+    },
+  ],
   darkMode: "class",
   theme: {
     fontFamily: {

@@ -46,6 +46,12 @@ export type Order = {
     lineTotal: string;
     productNameSnapshot: string;
     variantSkuSnapshot: string;
+    variant?: {
+      id: string;
+      sku: string;
+      size: string | null;
+      color: string | null;
+    } | null;
   }>;
 };
 
