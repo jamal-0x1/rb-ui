@@ -131,7 +131,12 @@ const ShopPage = () => {
   useEffect(() => {
     if (!bootstrapped) return;
     const urlQ = searchParams?.get("q")?.trim() ?? "";
-    const urlIds = csv(searchParams?.get("categoryIds") ?? null);
+    let urlIds = csv(searchParams?.get("categoryIds") ?? null);
+    const urlSlug = searchParams?.get("category");
+    if (urlIds.length === 0 && urlSlug && facets) {
+      const cat = facets.categories.find((c) => c.slug === urlSlug);
+      if (cat) urlIds = [cat.id];
+    }
     setFilters((prev) => {
       const sameQ = prev.q === urlQ;
       const sameIds =
@@ -141,7 +146,13 @@ const ShopPage = () => {
       return { ...prev, q: urlQ, categoryIds: urlIds };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams?.get("q"), searchParams?.get("categoryIds"), bootstrapped]);
+  }, [
+    searchParams?.get("q"),
+    searchParams?.get("categoryIds"),
+    searchParams?.get("category"),
+    bootstrapped,
+    facets,
+  ]);
 
   // Sync URL whenever filters change (after bootstrap)
   useEffect(() => {
