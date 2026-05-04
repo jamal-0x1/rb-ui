@@ -1,14 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, Package, Users, ShoppingCart, Truck, Star } from "lucide-react";
-import { clearToken } from "@/lib/admin/api";
+import {
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  Package,
+  Users,
+  ShoppingCart,
+  Truck,
+  Star,
+} from "lucide-react";
+import { api, clearToken } from "@/lib/admin/api";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+
+type Me = {
+  id: string;
+  email: string;
+  role: string;
+  firstName?: string | null;
+  lastName?: string | null;
+};
 
 type NavItem = { slug: string; label: string };
 type NavGroup = {
@@ -65,6 +82,19 @@ const NAV_GROUPS: NavGroup[] = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [me, setMe] = useState<Me | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api<Me>("/auth/me")
+      .then((u) => {
+        if (!cancelled) setMe(u);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const containingGroup = NAV_GROUPS.find((g) =>
     g.items.some((i) => pathname?.startsWith(`/admin/${i.slug}`)),
@@ -75,6 +105,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       NAV_GROUPS.map((g) => [g.label, g.label === containingGroup?.label]),
     ),
   );
+
+  const displayName =
+    [me?.firstName, me?.lastName].filter(Boolean).join(" ") ||
+    me?.email?.split("@")[0] ||
+    "Admin";
+  const initials = (
+    me?.firstName?.[0] ?? me?.email?.[0] ?? "A"
+  ).toUpperCase();
 
   const logout = () => {
     clearToken();
@@ -175,12 +213,33 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </ScrollArea>
 
       <Separator className="bg-slate-800" />
-      <div className="px-3 py-3">
+      <div className="px-3 py-3 space-y-2">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-md bg-white/5">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white font-semibold text-sm"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)",
+            }}
+            aria-hidden
+          >
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-slate-100 truncate">
+              {displayName}
+            </p>
+            <p className="text-[11px] text-slate-400 truncate" title={me?.email}>
+              {me?.email ?? "loading…"}
+            </p>
+          </div>
+        </div>
         <Button
           onClick={logout}
           variant="ghost"
           className="w-full justify-start text-slate-400 hover:text-slate-100 hover:bg-white/5"
         >
+          <LogOut className="h-4 w-4 mr-2" />
           Sign out
         </Button>
       </div>
