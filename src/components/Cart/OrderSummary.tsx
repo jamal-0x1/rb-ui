@@ -1,5 +1,6 @@
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useAppSelector } from "@/redux/store";
+import Link from "next/link";
 import React from "react";
 import { useSelector } from "react-redux";
 
@@ -53,12 +54,22 @@ const OrderSummary = () => {
           </div>
 
           {/* <!-- checkout button --> */}
-          <button
-            type="submit"
-            className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
-          >
-            Process to Checkout
-          </button>
+          {cartItems.length > 0 ? (
+            <Link
+              href="/checkout"
+              className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
+            >
+              Proceed to Checkout
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md mt-7.5 opacity-60 cursor-not-allowed"
+            >
+              Cart is empty
+            </button>
+          )}
         </div>
       </div>
     </div>
