@@ -583,7 +583,7 @@ const ShopDetails = () => {
               {/* <!--== tab header end ==--> */}
 
               {/* <!--== tab content start ==--> */}
-              {/* <!-- tab content one start --> */}
+              {/* <!-- tab content one (dynamic) --> */}
               <div>
                 <div
                   className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabOne" ? "flex" : "hidden"
@@ -593,54 +593,69 @@ const ShopDetails = () => {
                     <h2 className="font-medium text-2xl text-dark mb-7">
                       Specifications:
                     </h2>
-
-                    <p className="mb-6">
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the
-                      industry&apos;s standard dummy text ever since the 1500s,
-                      when an unknown printer took a galley of type and
-                      scrambled it to make a type specimen book.
-                    </p>
-                    <p className="mb-6">
-                      It has survived not only five centuries, but also the leap
-                      into electronic typesetting, remaining essentially
-                      unchanged. It was popularised in the 1960s.
-                    </p>
-                    <p>
-                      with the release of Letraset sheets containing Lorem Ipsum
-                      passages, and more recently with desktop publishing
-                      software like Aldus PageMaker including versions.
-                    </p>
+                    {(product.specifications || product.description) ? (
+                      (product.specifications || product.description)
+                        .split(/\n\s*\n/)
+                        .map((para: string, i: number) => (
+                          <p key={i} className="mb-6 whitespace-pre-line">
+                            {para}
+                          </p>
+                        ))
+                    ) : (
+                      <p className="text-dark-4">No specifications available.</p>
+                    )}
                   </div>
 
-                  <div className="max-w-[447px] w-full">
-                    <h2 className="font-medium text-2xl text-dark mb-7">
-                      Care & Maintenance:
-                    </h2>
-
-                    <p className="mb-6">
-                      Lorem Ipsum is simply dummy text of the printing and
-                      typesetting industry. Lorem Ipsum has been the
-                      industry&apos;s standard dummy text ever since the 1500s,
-                      when an unknown printer took a galley of type and
-                      scrambled it to make a type specimen book.
-                    </p>
-                    <p>
-                      It has survived not only five centuries, but also the leap
-                      into electronic typesetting, remaining essentially
-                      unchanged. It was popularised in the 1960s.
-                    </p>
-                  </div>
+                  {product.careInstructions && (
+                    <div className="max-w-[447px] w-full">
+                      <h2 className="font-medium text-2xl text-dark mb-7">
+                        Care &amp; Maintenance:
+                      </h2>
+                      {product.careInstructions
+                        .split(/\n\s*\n/)
+                        .map((para: string, i: number) => (
+                          <p key={i} className="mb-6 whitespace-pre-line">
+                            {para}
+                          </p>
+                        ))}
+                    </div>
+                  )}
                 </div>
               </div>
               {/* <!-- tab content one end --> */}
 
-              {/* <!-- tab content two start --> */}
+              {/* <!-- tab content two (dynamic attributes) --> */}
               <div>
                 <div
                   className={`rounded-xl bg-white shadow-1 p-4 sm:p-6 mt-10 ${activeTab === "tabTwo" ? "block" : "hidden"
                     }`}
                 >
+                  {product.attributes &&
+                  Object.keys(product.attributes).length > 0 ? (
+                    Object.entries(
+                      product.attributes as Record<string, unknown>,
+                    ).map(([k, v]) => (
+                      <div
+                        key={k}
+                        className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5"
+                      >
+                        <div className="max-w-[450px] min-w-[140px] w-full">
+                          <p className="text-sm sm:text-base text-dark">{k}</p>
+                        </div>
+                        <div className="w-full">
+                          <p className="text-sm sm:text-base text-dark">
+                            {String(v ?? "")}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-dark-4 px-2 py-2">No additional information.</p>
+                  )}
+                </div>
+              </div>
+              {/* legacy hardcoded info hidden */}
+              <div className="hidden">
                   {/* <!-- info item --> */}
                   <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
                     <div className="max-w-[450px] min-w-[140px] w-full">
@@ -773,7 +788,6 @@ const ShopDetails = () => {
                       </p>
                     </div>
                   </div>
-                </div>
               </div>
               {/* <!-- tab content two end --> */}
 

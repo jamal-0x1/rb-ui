@@ -67,7 +67,9 @@ export default function ResourceNewPage() {
       if (v === null || v === "") return;
       if (f.type === "boolean") data[f.key] = v === "on";
       else if (f.type === "number") data[f.key] = Number(v);
-      else data[f.key] = v;
+      else if (f.type === "json") {
+        try { data[f.key] = JSON.parse(String(v)); } catch { /* skip invalid */ }
+      } else data[f.key] = v;
     });
 
     try {
@@ -138,6 +140,21 @@ export default function ResourceNewPage() {
                       ),
                     )}
                   </select>
+                ) : f.type === "textarea" ? (
+                  <textarea
+                    id={f.key}
+                    name={f.key}
+                    rows={5}
+                    className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                ) : f.type === "json" ? (
+                  <textarea
+                    id={f.key}
+                    name={f.key}
+                    rows={6}
+                    placeholder='{"Brand":"Apple","Model":"iPhone 14 Plus"}'
+                    className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm font-mono shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
                 ) : (
                   <Input
                     id={f.key}

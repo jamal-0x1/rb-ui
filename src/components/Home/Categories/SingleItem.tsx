@@ -1,10 +1,14 @@
 import { Category } from "@/types/category";
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 const SingleItem = ({ item }: { item: Category }) => {
+  const href = item.slug
+    ? `/shop-with-sidebar?category=${item.slug}`
+    : "/shop-with-sidebar";
   return (
-    <a href="#" className="group flex flex-col items-center">
+    <Link href={href} className="group flex flex-col items-center">
       <div className="max-w-[130px] w-full bg-[#F2F3F8] h-32.5 rounded-full flex items-center justify-center mb-4">
         <Image src={item.img} alt="Category" width={82} height={62} unoptimized />
       </div>
@@ -14,7 +18,7 @@ const SingleItem = ({ item }: { item: Category }) => {
           {item.title}
         </h3>
       </div>
-    </a>
+    </Link>
   );
 };
 

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import CustomSelect from "./CustomSelect";
 import CategoryDropdown from "./CategoryDropdown";
@@ -7,14 +8,51 @@ import GenderDropdown from "./GenderDropdown";
 import SizeDropdown from "./SizeDropdown";
 import ColorsDropdwon from "./ColorsDropdwon";
 import PriceDropdown from "./PriceDropdown";
-import shopData from "../Shop/shopData";
 import SingleGridItem from "../Shop/SingleGridItem";
 import SingleListItem from "../Shop/SingleListItem";
+import {
+  fetchPublic,
+  dbProductToShopItem,
+  type DbProduct,
+  type DbCategory,
+} from "@/lib/publicApi";
+import type { Product } from "@/types/product";
 
 const ShopWithSidebar = () => {
   const [productStyle, setProductStyle] = useState("grid");
   const [productSidebar, setProductSidebar] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
+  const [shopData, setShopData] = useState<Product[]>([]);
+  const [activeCategoryName, setActiveCategoryName] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const categorySlug = searchParams?.get("category") ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        let categoryId: string | null = null;
+        if (categorySlug) {
+          const cats = await fetchPublic<DbCategory[]>("/categories");
+          const match = cats.find((c) => c.slug === categorySlug);
+          categoryId = match?.id ?? null;
+          if (!cancelled) setActiveCategoryName(match?.name ?? categorySlug);
+        } else {
+          if (!cancelled) setActiveCategoryName(null);
+        }
+        const path = categoryId
+          ? `/products?categoryId=${categoryId}&limit=50`
+          : "/products?limit=50";
+        const rows = await fetchPublic<DbProduct[]>(path);
+        if (!cancelled) setShopData(rows.map(dbProductToShopItem));
+      } catch {
+        if (!cancelled) setShopData([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [categorySlug]);
 
   const handleStickyMenu = () => {
     if (window.scrollY >= 80) {

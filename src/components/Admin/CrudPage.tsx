@@ -412,6 +412,33 @@ export function CrudPage({ resource }: { resource: Resource }) {
       fieldCols.unshift(thumbCol);
     }
 
+    if (resource.slug === "categories") {
+      const apiOrigin = API_URL.replace(/\/api\/?$/, "");
+      const thumbCol: ColumnDef<Row> = {
+        id: "thumbnail",
+        header: () => <span className="sr-only">Icon</span>,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const url = row.original.imageUrl as string | undefined;
+          if (!url)
+            return (
+              <div className="size-10 rounded-md bg-muted flex items-center justify-center text-muted-foreground text-[10px]">
+                —
+              </div>
+            );
+          const src = url.startsWith("http") ? url : `${apiOrigin}${url}`;
+          return (
+            <img
+              src={src}
+              alt=""
+              className="size-10 rounded-md object-contain bg-muted p-1"
+            />
+          );
+        },
+      };
+      fieldCols.unshift(thumbCol);
+    }
+
     const actionsCol: ColumnDef<Row> = {
       id: "actions",
       header: () => <span className="sr-only">Actions</span>,

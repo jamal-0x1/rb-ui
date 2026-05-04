@@ -28,6 +28,9 @@ export type DbProduct = {
   name: string;
   slug: string;
   description: string | null;
+  specifications?: string | null;
+  careInstructions?: string | null;
+  attributes?: Record<string, string | number | null> | null;
   basePrice: string;
   currency: string;
   active: boolean;
@@ -62,6 +65,9 @@ export function dbProductToShopItem(p: DbProduct): Product {
     price,
     discountedPrice: price,
     description: p.description,
+    specifications: p.specifications ?? null,
+    careInstructions: p.careInstructions ?? null,
+    attributes: p.attributes ?? null,
     category: p.category
       ? { id: p.category.id, name: p.category.name, slug: p.category.slug }
       : null,

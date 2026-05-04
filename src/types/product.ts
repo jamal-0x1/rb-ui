@@ -13,6 +13,9 @@ export type Product = {
   id: number | string;
   slug?: string;
   description?: string | null;
+  specifications?: string | null;
+  careInstructions?: string | null;
+  attributes?: Record<string, string | number | null> | null;
   category?: { id: string; name: string; slug: string } | null;
   variants?: ProductVariantInfo[];
   tags?: string[];
