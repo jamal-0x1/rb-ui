@@ -3,7 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Package } from "lucide-react";
+import {
+  ArrowLeft,
+  Pencil,
+  Package,
+  History,
+  PlusCircle,
+  MinusCircle,
+  Edit3,
+  Tag,
+  StickyNote,
+  CircleDot,
+} from "lucide-react";
 
 import { getResource, type ResourceField } from "@/lib/admin/resources";
 import { api } from "@/lib/admin/api";
@@ -234,10 +245,53 @@ export default function ResourceViewPage() {
   );
 }
 
+type OrderEvent = {
+  id: string;
+  type: string;
+  message: string;
+  payload?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+const EVENT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  created: CircleDot,
+  item_added: PlusCircle,
+  item_removed: MinusCircle,
+  item_qty_changed: Edit3,
+  status_changed: Tag,
+  notes_changed: StickyNote,
+};
+
+function relativeTime(iso: string) {
+  const then = new Date(iso).getTime();
+  const now = Date.now();
+  const sec = Math.round((now - then) / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} min${min === 1 ? "" : "s"} ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `${day} day${day === 1 ? "" : "s"} ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function fullTime(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function OrderView({ row }: { row: Row }) {
   const items: any[] = row.items ?? [];
   const payments: any[] = row.payments ?? [];
   const shipments: any[] = row.shipments ?? [];
+  const events: OrderEvent[] = row.events ?? [];
   const currency = row.currency ?? "BDT";
 
   return (
@@ -482,18 +536,51 @@ function OrderView({ row }: { row: Row }) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Meta</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="size-4" />
+              Activity
+            </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm space-y-1">
-            <p className="text-muted-foreground">
-              Placed{" "}
-              <span className="text-foreground">
-                {row.placedAt ? new Date(row.placedAt).toLocaleString() : "—"}
-              </span>
-            </p>
-            <p className="font-mono text-xs text-muted-foreground break-all">
-              {row.id}
-            </p>
+          <CardContent className="text-sm space-y-4">
+            <div className="space-y-1">
+              <p>
+                <span className="text-muted-foreground">Placed </span>
+                <span className="font-medium" title={row.placedAt ? fullTime(row.placedAt) : ""}>
+                  {row.placedAt ? relativeTime(row.placedAt) : "—"}
+                </span>
+              </p>
+              {row.placedAt && (
+                <p className="text-xs text-muted-foreground">
+                  {fullTime(row.placedAt)}
+                </p>
+              )}
+            </div>
+
+            {events.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No activity recorded yet.
+              </p>
+            ) : (
+              <ol className="space-y-3 border-l border-border ml-1.5 pl-4">
+                {events.map((ev) => {
+                  const Icon = EVENT_ICON[ev.type] ?? CircleDot;
+                  return (
+                    <li key={ev.id} className="relative">
+                      <span className="absolute -left-[1.4rem] top-0.5 flex size-5 items-center justify-center rounded-full bg-background border border-border">
+                        <Icon className="size-3 text-muted-foreground" />
+                      </span>
+                      <p className="leading-snug">{ev.message}</p>
+                      <p
+                        className="text-xs text-muted-foreground"
+                        title={fullTime(ev.createdAt)}
+                      >
+                        {relativeTime(ev.createdAt)}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </CardContent>
         </Card>
       </div>

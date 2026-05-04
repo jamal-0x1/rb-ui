@@ -27,6 +27,48 @@ export type CheckoutInput = {
   notes?: string;
 };
 
+export type OrderItem = {
+  id: string;
+  variantId: string;
+  quantity: number;
+  unitPrice: string;
+  lineTotal: string;
+  productNameSnapshot: string;
+  variantSkuSnapshot: string;
+  variant?: {
+    id: string;
+    sku: string;
+    size: string | null;
+    color: string | null;
+    product?: {
+      id: string;
+      name: string;
+      slug: string;
+      brand?: string | null;
+      images?: Array<{ url: string }>;
+    } | null;
+  } | null;
+};
+
+export type OrderAddress = {
+  id: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string | null;
+  postalCode: string;
+  country: string;
+};
+
+export type OrderPayment = {
+  id: string;
+  method: string;
+  amount: string;
+  status: string;
+  collectedAt: string | null;
+  notes: string | null;
+};
+
 export type Order = {
   id: string;
   orderNumber: string;
@@ -38,21 +80,17 @@ export type Order = {
   grandTotal: string;
   currency: string;
   placedAt: string;
-  items: Array<{
+  notes?: string | null;
+  items: OrderItem[];
+  shippingAddress?: OrderAddress | null;
+  billingAddress?: OrderAddress | null;
+  payments?: OrderPayment[];
+  user?: {
     id: string;
-    variantId: string;
-    quantity: number;
-    unitPrice: string;
-    lineTotal: string;
-    productNameSnapshot: string;
-    variantSkuSnapshot: string;
-    variant?: {
-      id: string;
-      sku: string;
-      size: string | null;
-      color: string | null;
-    } | null;
-  }>;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
 };
 
 export const SHIPPING_RATES: Record<CheckoutShippingMethod, number> = {

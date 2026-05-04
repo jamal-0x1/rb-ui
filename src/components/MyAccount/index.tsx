@@ -422,7 +422,7 @@ const OrdersTable = ({
             {!compact && (
               <td className="py-4 pr-3 text-right">
                 <Link
-                  href={`/order-success/${o.id}`}
+                  href={`/orders/${o.id}`}
                   aria-label="View order"
                   className="inline-flex items-center justify-center text-dark-4 hover:text-blue"
                 >

@@ -18,6 +18,7 @@ import { ProductImageManager } from "@/components/Admin/ProductImageManager";
 import { CategoryImageManager } from "@/components/Admin/CategoryImageManager";
 import { AttributesEditor } from "@/components/Admin/AttributesEditor";
 import { VariantMatrixManager } from "@/components/Admin/VariantMatrixManager";
+import { OrderItemsManager } from "@/components/Admin/OrderItemsManager";
 
 type Row = Record<string, any>;
 
@@ -283,6 +284,10 @@ export default function ResourceEditPage() {
 
       {resource.slug === "products" && row ? (
         <VariantMatrixManager productId={params.id} />
+      ) : null}
+
+      {resource.slug === "orders" && row ? (
+        <OrderItemsManager orderId={params.id} />
       ) : null}
     </div>
   );
