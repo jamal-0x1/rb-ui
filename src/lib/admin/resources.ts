@@ -1,7 +1,7 @@
 export type ResourceField = {
   key: string;
   label: string;
-  type?: "text" | "number" | "boolean" | "json" | "textarea";
+  type?: "text" | "number" | "boolean" | "json" | "textarea" | "keyvalue";
   hideInList?: boolean;
   hideInForm?: boolean;
   relation?: { resource: string; labelField: string };
@@ -61,7 +61,7 @@ export const RESOURCES: Resource[] = [
       { key: "description", label: "Description", type: "textarea", hideInList: true },
       { key: "specifications", label: "Specifications", type: "textarea", hideInList: true },
       { key: "careInstructions", label: "Care & Maintenance", type: "textarea", hideInList: true },
-      { key: "attributes", label: "Attributes (JSON)", type: "json", hideInList: true },
+      { key: "attributes", label: "Attributes", type: "keyvalue", hideInList: true },
     ],
   },
   {

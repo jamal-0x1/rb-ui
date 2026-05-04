@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { getResource } from "@/lib/admin/resources";
 import { api } from "@/lib/admin/api";
+import { AttributesEditor } from "@/components/Admin/AttributesEditor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,7 +68,7 @@ export default function ResourceNewPage() {
       if (v === null || v === "") return;
       if (f.type === "boolean") data[f.key] = v === "on";
       else if (f.type === "number") data[f.key] = Number(v);
-      else if (f.type === "json") {
+      else if (f.type === "json" || f.type === "keyvalue") {
         try { data[f.key] = JSON.parse(String(v)); } catch { /* skip invalid */ }
       } else data[f.key] = v;
     });
@@ -147,6 +148,8 @@ export default function ResourceNewPage() {
                     rows={5}
                     className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
+                ) : f.type === "keyvalue" ? (
+                  <AttributesEditor name={f.key} />
                 ) : f.type === "json" ? (
                   <textarea
                     id={f.key}
