@@ -617,10 +617,20 @@ const MyAccount = () => {
                     </label>
 
                     <div className="relative">
-                      <select className="w-full bg-gray-1 rounded-md border border-gray-3 text-dark-4 py-3 pl-5 pr-9 duration-200 appearance-none outline-none focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20">
-                        <option value="0">Australia</option>
-                        <option value="1">America</option>
-                        <option value="2">England</option>
+                      <select
+                        name="country"
+                        defaultValue="Bangladesh"
+                        className="w-full bg-gray-1 rounded-md border border-gray-3 text-dark-4 py-3 pl-5 pr-9 duration-200 appearance-none outline-none focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+                      >
+                        <option value="Bangladesh">Bangladesh</option>
+                        <option value="India">India</option>
+                        <option value="Pakistan">Pakistan</option>
+                        <option value="Sri Lanka">Sri Lanka</option>
+                        <option value="Nepal">Nepal</option>
+                        <option value="Bhutan">Bhutan</option>
+                        <option value="Maldives">Maldives</option>
+                        <option value="United States">United States</option>
+                        <option value="United Kingdom">United Kingdom</option>
                       </select>
 
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-4">
