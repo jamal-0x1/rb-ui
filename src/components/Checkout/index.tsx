@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Breadcrumb from "../Common/Breadcrumb";
@@ -7,13 +7,14 @@ import Login from "./Login";
 import ShippingMethod from "./ShippingMethod";
 import PaymentMethod from "./PaymentMethod";
 import Coupon from "./Coupon";
-import Billing from "./Billing";
+import Billing, { type BillingPrefill } from "./Billing";
 import {
   createCheckout,
   SHIPPING_LABELS,
   SHIPPING_RATES,
   type CheckoutShippingMethod,
 } from "@/lib/orderApi";
+import { fetchMyAddresses, type UserAddress } from "@/lib/myAccountApi";
 import { selectTotalPrice, removeAllItemsFromCart } from "@/redux/features/cart-slice";
 import { useAppSelector, type AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
@@ -34,6 +35,54 @@ const Checkout = () => {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [defaultAddress, setDefaultAddress] = useState<UserAddress | null>(null);
+  const [addressesLoaded, setAddressesLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setDefaultAddress(null);
+      setAddressesLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    fetchMyAddresses()
+      .then((list) => {
+        if (cancelled) return;
+        const def =
+          list.find((a) => a.isDefaultShipping) ??
+          list.find((a) => a.isDefaultBilling) ??
+          list[0] ??
+          null;
+        setDefaultAddress(def);
+      })
+      .catch(() => {
+        if (!cancelled) setDefaultAddress(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAddressesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const billingPrefill = useMemo<BillingPrefill | null>(() => {
+    if (!user) return null;
+    return {
+      firstName: user.firstName ?? "",
+      lastName: user.lastName ?? "",
+      email: user.email,
+      country: defaultAddress?.country ?? "Bangladesh",
+      address: defaultAddress?.line1 ?? "",
+      addressTwo: defaultAddress?.line2 ?? "",
+      town: defaultAddress?.city ?? "",
+      postalCode: defaultAddress?.postalCode ?? "",
+    };
+  }, [user, defaultAddress]);
+
+  const billingKey = user
+    ? `user-${user.id}-${defaultAddress?.id ?? "none"}`
+    : "guest";
 
   const shippingFee = SHIPPING_RATES[shippingMethod];
   const total = subtotal + shippingFee;
@@ -132,8 +181,18 @@ const Checkout = () => {
             <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11">
               {/* left */}
               <div className="lg:max-w-[670px] w-full">
-                <Login />
-                <Billing />
+                {!user && <Login />}
+                {userLoading || !addressesLoaded ? (
+                  <div className="mt-9 bg-white shadow-1 rounded-[10px] p-6 text-dark-4">
+                    Loading billing details...
+                  </div>
+                ) : (
+                  <Billing
+                    key={billingKey}
+                    isLoggedIn={!!user}
+                    prefill={billingPrefill ?? undefined}
+                  />
+                )}
 
                 <div className="bg-white shadow-1 rounded-[10px] p-4 sm:p-8.5 mt-7.5">
                   <label htmlFor="notes" className="block mb-2.5">
