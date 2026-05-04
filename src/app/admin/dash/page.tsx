@@ -137,6 +137,7 @@ export default function DashPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all(
@@ -374,7 +375,7 @@ export default function DashPage() {
             </div>
           </div>
 
-          {/* 7-day bar chart */}
+          {/* 7-day line chart */}
           <div className="lg:col-span-2 rounded-xl border bg-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold">Last 7 days</h3>
@@ -382,43 +383,169 @@ export default function DashPage() {
             </div>
             {ordersLoading ? (
               <Skeleton className="h-40 w-full" />
-            ) : (
-              <div className="flex items-end gap-3 h-40">
-                {orderReport?.days.map((d, i) => {
-                  const height =
-                    d.total > 0
-                      ? Math.max((d.total / orderReport.peakDay) * 100, 8)
-                      : 4;
-                  const isEmpty = d.total === 0;
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 flex flex-col items-center gap-1.5 group"
-                    >
-                      <div className="relative w-full flex-1 flex items-end">
-                        <div
-                          className="w-full rounded-t-md transition-all duration-300"
-                          style={{
-                            height: `${height}%`,
-                            minHeight: "6px",
-                            backgroundImage: isEmpty
-                              ? "linear-gradient(to top, #e5e7eb, #f3f4f6)"
-                              : "linear-gradient(to top, #6366f1 0%, #3b82f6 50%, #22d3ee 100%)",
-                            boxShadow: isEmpty
-                              ? "none"
-                              : "0 4px 12px -2px rgba(59, 130, 246, 0.4)",
-                          }}
-                          title={`${formatBDT(d.total)} · ${d.count} order${d.count === 1 ? "" : "s"}`}
+            ) : (() => {
+              const days = orderReport?.days ?? [];
+              const peak = orderReport?.peakDay ?? 1;
+              const W = 700;
+              const H = 200;
+              const PAD_X = 24;
+              const PAD_TOP = 16;
+              const PAD_BOTTOM = 36;
+              const innerW = W - PAD_X * 2;
+              const innerH = H - PAD_TOP - PAD_BOTTOM;
+              const xFor = (i: number) =>
+                PAD_X + (innerW * i) / Math.max(days.length - 1, 1);
+              const yFor = (v: number) =>
+                PAD_TOP + innerH - (innerH * v) / peak;
+              const points = days.map((d, i) => ({
+                x: xFor(i),
+                y: yFor(d.total),
+                d,
+                i,
+              }));
+              const linePath = points
+                .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+                .join(" ");
+              const areaPath =
+                points.length > 0
+                  ? `${linePath} L ${xFor(days.length - 1)} ${PAD_TOP + innerH} L ${PAD_X} ${PAD_TOP + innerH} Z`
+                  : "";
+              const hovered = hoverIdx !== null ? points[hoverIdx] : null;
+              return (
+                <div className="relative">
+                  <svg
+                    viewBox={`0 0 ${W} ${H}`}
+                    className="w-full h-48"
+                    preserveAspectRatio="none"
+                    onMouseLeave={() => setHoverIdx(null)}
+                  >
+                    <defs>
+                      <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="50%" stopColor="#3b82f6" />
+                        <stop offset="100%" stopColor="#22d3ee" />
+                      </linearGradient>
+                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* baseline */}
+                    <line
+                      x1={PAD_X}
+                      x2={W - PAD_X}
+                      y1={PAD_TOP + innerH}
+                      y2={PAD_TOP + innerH}
+                      stroke="#e5e7eb"
+                      strokeWidth="1"
+                    />
+
+                    {/* area */}
+                    {areaPath && <path d={areaPath} fill="url(#areaGrad)" />}
+
+                    {/* line */}
+                    {linePath && (
+                      <path
+                        d={linePath}
+                        stroke="url(#lineGrad)"
+                        strokeWidth="2.5"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+
+                    {/* hover guideline */}
+                    {hovered && (
+                      <line
+                        x1={hovered.x}
+                        x2={hovered.x}
+                        y1={PAD_TOP}
+                        y2={PAD_TOP + innerH}
+                        stroke="#3b82f6"
+                        strokeWidth="1"
+                        strokeDasharray="3 3"
+                        opacity="0.4"
+                      />
+                    )}
+
+                    {/* points + hover targets */}
+                    {points.map((p) => (
+                      <g key={p.i}>
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r={hoverIdx === p.i ? 5 : 3.5}
+                          fill={hoverIdx === p.i ? "#3b82f6" : "white"}
+                          stroke="#3b82f6"
+                          strokeWidth="2"
+                          className="transition-all"
                         />
+                        <circle
+                          cx={p.x}
+                          cy={p.y}
+                          r={24}
+                          fill="transparent"
+                          onMouseEnter={() => setHoverIdx(p.i)}
+                          style={{ cursor: "pointer" }}
+                        />
+                      </g>
+                    ))}
+
+                    {/* day labels */}
+                    {points.map((p) => (
+                      <text
+                        key={`l${p.i}`}
+                        x={p.x}
+                        y={H - 12}
+                        textAnchor="middle"
+                        className="fill-muted-foreground"
+                        fontSize="11"
+                        style={{
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          fontWeight: hoverIdx === p.i ? 600 : 400,
+                        }}
+                      >
+                        {p.d.label}
+                      </text>
+                    ))}
+                  </svg>
+
+                  {/* tooltip */}
+                  {hovered && (
+                    <div
+                      className="absolute pointer-events-none rounded-lg bg-slate-900 text-white text-xs px-3 py-2 shadow-lg whitespace-nowrap"
+                      style={{
+                        left: `${(hovered.x / W) * 100}%`,
+                        top: `${(hovered.y / H) * 100}%`,
+                        transform: "translate(-50%, calc(-100% - 14px))",
+                      }}
+                    >
+                      <div className="font-semibold mb-0.5">
+                        {hovered.d.date.toLocaleDateString("en-GB", {
+                          weekday: "long",
+                          day: "2-digit",
+                          month: "short",
+                        })}
                       </div>
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {d.label}
-                      </span>
+                      <div className="text-sm font-bold">
+                        {formatBDT(hovered.d.total)}
+                      </div>
+                      <div className="text-white/70">
+                        {hovered.d.count} order
+                        {hovered.d.count === 1 ? "" : "s"}
+                      </div>
+                      <div
+                        className="absolute left-1/2 -bottom-1 size-2 -translate-x-1/2 rotate-45 bg-slate-900"
+                        aria-hidden
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* status breakdown */}
