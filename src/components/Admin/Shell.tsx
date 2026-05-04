@@ -47,7 +47,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
 
-        <SheetContent side="left" className="p-0 w-64" showCloseButton={false}>
+        <SheetContent
+          side="left"
+          className="p-0 data-[side=left]:w-64 sm:data-[side=left]:max-w-64"
+          showCloseButton={false}
+        >
           <Sidebar onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>

@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { ProductImageManager } from "@/components/Admin/ProductImageManager";
+import { CategoryImageManager } from "@/components/Admin/CategoryImageManager";
 
 type Row = Record<string, any>;
 
@@ -184,22 +186,46 @@ export default function ResourceViewPage() {
         isOrder ? (
           <OrderView row={row} />
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableBody>
-                  {resource.fields.map((f) => (
-                    <TableRow key={f.key}>
-                      <TableCell className="w-[200px] font-medium text-muted-foreground">
-                        {f.label}
-                      </TableCell>
-                      <TableCell>{formatValue(row[f.key], f, relations)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          (() => {
+            const hasImages =
+              resource.slug === "products" || resource.slug === "categories";
+            const fieldsCard = (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableBody>
+                      {resource.fields.map((f) => (
+                        <TableRow key={f.key}>
+                          <TableCell className="w-[200px] font-medium text-muted-foreground">
+                            {f.label}
+                          </TableCell>
+                          <TableCell>
+                            {formatValue(row[f.key], f, relations)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            );
+            if (!hasImages) return fieldsCard;
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">{fieldsCard}</div>
+                <div className="lg:col-span-1">
+                  <div className="lg:sticky lg:top-6">
+                    {resource.slug === "products" && (
+                      <ProductImageManager productId={params.id} />
+                    )}
+                    {resource.slug === "categories" && (
+                      <CategoryImageManager categoryId={params.id} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()
         )
       ) : (
         <p className="text-muted-foreground text-sm">Record not found.</p>

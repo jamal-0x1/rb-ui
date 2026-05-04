@@ -41,7 +41,6 @@ const NAV_GROUPS: NavGroup[] = [
     icon: ShoppingCart,
     items: [
       { slug: "orders", label: "Orders" },
-      { slug: "carts", label: "Carts" },
       { slug: "coupons", label: "Coupons" },
     ],
   },

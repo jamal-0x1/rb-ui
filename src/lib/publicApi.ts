@@ -28,9 +28,17 @@ export type DbProduct = {
   name: string;
   slug: string;
   description: string | null;
+  shortDescription?: string | null;
   specifications?: string | null;
   careInstructions?: string | null;
   attributes?: Record<string, string | number | null> | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  brand?: string | null;
+  mpn?: string | null;
+  condition?: string | null;
+  keywords?: string | null;
+  noIndex?: boolean | null;
   basePrice: string;
   currency: string;
   active: boolean;
@@ -72,9 +80,16 @@ export function dbProductToShopItem(p: DbProduct): Product {
     price,
     discountedPrice: price,
     description: p.description,
+    shortDescription: p.shortDescription ?? null,
     specifications: p.specifications ?? null,
     careInstructions: p.careInstructions ?? null,
     attributes: p.attributes ?? null,
+    metaTitle: p.metaTitle ?? null,
+    metaDescription: p.metaDescription ?? null,
+    brand: p.brand ?? null,
+    mpn: p.mpn ?? null,
+    condition: p.condition ?? null,
+    noIndex: p.noIndex ?? null,
     category: p.category
       ? { id: p.category.id, name: p.category.name, slug: p.category.slug }
       : null,

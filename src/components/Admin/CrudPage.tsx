@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, ExternalLink } from "lucide-react";
 
 import type { Resource, ResourceField } from "@/lib/admin/resources";
 import { getResource } from "@/lib/admin/resources";
@@ -182,6 +182,20 @@ function EditDialog({
                     ),
                   )}
                 </select>
+              ) : f.options ? (
+                <select
+                  id={`field-${f.key}`}
+                  name={f.key}
+                  defaultValue={row?.[f.key] ?? ""}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring capitalize"
+                >
+                  <option value="">— Select —</option>
+                  {f.options.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <Input
                   id={`field-${f.key}`}
@@ -208,6 +222,7 @@ function EditDialog({
 // -----------------------------------------------------------------------
 function RowActions({
   row,
+  resource,
   onView,
   onEdit,
   onDelete,
@@ -218,6 +233,7 @@ function RowActions({
   onEdit: (row: Row) => void;
   onDelete: (row: Row) => void;
 }) {
+  const publicHref = resource.publicHref?.(row) ?? null;
   return (
     <div className="flex items-center justify-end gap-0.5">
       <button
@@ -236,6 +252,18 @@ function RowActions({
       >
         <Pencil className="size-3.5" strokeWidth={1.75} />
       </button>
+      {publicHref && (
+        <a
+          href={publicHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open public page"
+          title="Open public page"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <ExternalLink className="size-3.5" strokeWidth={1.75} />
+        </a>
+      )}
       <button
         type="button"
         aria-label="Delete"

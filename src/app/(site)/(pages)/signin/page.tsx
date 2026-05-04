@@ -5,9 +5,10 @@ import { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Signin Page | NextCommerce Nextjs E-commerce template",
-  description: "This is Signin Page for NextCommerce Template",
-  // other metadata
+  title: "Sign in",
+  description: "Sign in to your RB Accessories account to view orders, addresses and more.",
+  alternates: { canonical: "/signin" },
+  robots: { index: true, follow: true },
 };
 
 const SigninPage = () => {

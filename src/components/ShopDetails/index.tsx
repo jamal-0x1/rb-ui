@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Breadcrumb from "../Common/Breadcrumb";
 import Newsletter from "../Common/Newsletter";
 import RecentlyViewdItems from "./RecentlyViewd";
+import ShopDetailsJsonLd from "./JsonLd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
 import { useAppSelector, type AppDispatch } from "@/redux/store";
 import { useDispatch } from "react-redux";
@@ -261,6 +262,7 @@ const ShopDetails = () => {
 
   return (
     <>
+      <ShopDetailsJsonLd product={product} />
       <Breadcrumb title={product.title} pages={["shop", "/", "details"]} />
 
       <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
@@ -313,6 +315,11 @@ const ShopDetails = () => {
 
             {/* Info */}
             <div className="max-w-[539px] w-full">
+              {product.brand && (
+                <p className="text-xs uppercase tracking-wide font-medium text-dark-4 mb-1.5">
+                  {product.brand}
+                </p>
+              )}
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">
                   {product.title}
@@ -331,17 +338,29 @@ const ShopDetails = () => {
                 )}
               </div>
 
-              {product.category?.name && (
-                <p className="text-sm text-dark-4 mb-3">
-                  Category:{" "}
-                  <Link
-                    href={`/shop?categoryIds=${product.category.id}`}
-                    className="text-dark hover:text-blue"
-                  >
-                    {product.category.name}
-                  </Link>
-                </p>
-              )}
+              <div className="flex flex-wrap items-center gap-3 text-sm text-dark-4 mb-3">
+                {product.category?.name && (
+                  <span>
+                    Category:{" "}
+                    <Link
+                      href={`/shop?categoryIds=${product.category.id}`}
+                      className="text-dark hover:text-blue"
+                    >
+                      {product.category.name}
+                    </Link>
+                  </span>
+                )}
+                {product.mpn && (
+                  <span>
+                    MPN: <span className="text-dark">{product.mpn}</span>
+                  </span>
+                )}
+                {product.condition && product.condition !== "new" && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-light-4 text-yellow-dark text-xs capitalize">
+                    {product.condition}
+                  </span>
+                )}
+              </div>
 
               <div className="flex flex-wrap items-center gap-5.5 mb-4.5">
                 <div className="flex items-center gap-2.5">
@@ -383,9 +402,9 @@ const ShopDetails = () => {
                   )}
               </h3>
 
-              {product.description && (
+              {(product.shortDescription || product.description) && (
                 <p className="text-sm text-dark-4 mb-5 leading-relaxed">
-                  {product.description}
+                  {product.shortDescription || product.description}
                 </p>
               )}
 

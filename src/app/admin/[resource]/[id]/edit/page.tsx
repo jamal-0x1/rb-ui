@@ -140,16 +140,29 @@ export default function ResourceEditPage() {
         </div>
       )}
 
-      <Card>
+      <div
+        className={
+          resource.slug === "products" || resource.slug === "categories"
+            ? "grid grid-cols-1 lg:grid-cols-3 gap-6"
+            : ""
+        }
+      >
+      <Card
+        className={
+          resource.slug === "products" || resource.slug === "categories"
+            ? "lg:col-span-2"
+            : ""
+        }
+      >
         <CardContent className="p-6">
           {loading ? (
-            <div className="space-y-5 max-w-lg">
+            <div className="space-y-5">
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-9 w-full" />
               ))}
             </div>
           ) : row ? (
-            <form onSubmit={submit} className="space-y-5 max-w-lg">
+            <form onSubmit={submit} className="space-y-5">
               {formFields.map((f) => (
                 <div key={f.key} className="space-y-1.5">
                   <Label htmlFor={f.key}>{f.label}</Label>
@@ -180,6 +193,20 @@ export default function ResourceEditPage() {
                           <option key={id} value={id}>{label}</option>
                         ),
                       )}
+                    </select>
+                  ) : f.options ? (
+                    <select
+                      id={f.key}
+                      name={f.key}
+                      defaultValue={row[f.key] ?? ""}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring capitalize"
+                    >
+                      <option value="">— Select —</option>
+                      {f.options.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt.replace(/_/g, " ")}
+                        </option>
+                      ))}
                     </select>
                   ) : f.type === "textarea" ? (
                     <textarea
@@ -239,12 +266,19 @@ export default function ResourceEditPage() {
         </CardContent>
       </Card>
 
-      {resource.slug === "products" && row && (
-        <ProductImageManager productId={params.id} />
-      )}
-      {resource.slug === "categories" && row && (
-        <CategoryImageManager categoryId={params.id} />
-      )}
+      {(resource.slug === "products" || resource.slug === "categories") && row ? (
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-6">
+            {resource.slug === "products" && (
+              <ProductImageManager productId={params.id} />
+            )}
+            {resource.slug === "categories" && (
+              <CategoryImageManager categoryId={params.id} />
+            )}
+          </div>
+        </div>
+      ) : null}
+      </div>
     </div>
   );
 }

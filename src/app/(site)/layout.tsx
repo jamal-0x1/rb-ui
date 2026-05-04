@@ -1,59 +1,60 @@
-"use client";
-import { useState, useEffect } from "react";
+import type { Metadata, Viewport } from "next";
 import "../css/euclid-circular-a-font.css";
 import "../css/style.css";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import SiteShell from "./SiteShell";
+import SiteJsonLd from "./SiteJsonLd";
 
-import { ModalProvider } from "../context/QuickViewModalContext";
-import { CartModalProvider } from "../context/CartSidebarModalContext";
-import { ReduxProvider } from "@/redux/provider";
-import QuickViewModal from "@/components/Common/QuickViewModal";
-import CartSidebarModal from "@/components/Common/CartSidebarModal";
-import { PreviewSliderProvider } from "../context/PreviewSliderContext";
-import PreviewSliderModal from "@/components/Common/PreviewSlider";
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://riyad-bhai.orbitalmind.xyz"
+).replace(/\/$/, "");
 
-import ScrollToTop from "@/components/Common/ScrollToTop";
-import PreLoader from "@/components/Common/PreLoader";
-import { Toaster } from "@/components/ui/sonner";
+const SITE_NAME = "RB Accessories";
+const SITE_TAGLINE = "Bangladesh's accessories storefront";
+const SITE_DESCRIPTION =
+  "Shop phones, watches, audio, peripherals and more. BDT pricing, cash on delivery across Bangladesh.";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    locale: "en_BD",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
+  formatDetection: { telephone: true, email: true, address: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#3C50E0",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
-
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <body>
-        {loading ? (
-          <PreLoader />
-        ) : (
-          <>
-            <ReduxProvider>
-              <CartModalProvider>
-                <ModalProvider>
-                  <PreviewSliderProvider>
-                    <Header />
-                    {children}
-
-                    <QuickViewModal />
-                    <CartSidebarModal />
-                    <PreviewSliderModal />
-                  </PreviewSliderProvider>
-                </ModalProvider>
-              </CartModalProvider>
-            </ReduxProvider>
-            <ScrollToTop />
-            <Footer />
-            <Toaster richColors position="bottom-right" />
-          </>
-        )}
+        <SiteJsonLd />
+        <SiteShell>{children}</SiteShell>
       </body>
     </html>
   );

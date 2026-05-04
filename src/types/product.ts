@@ -19,9 +19,16 @@ export type Product = {
   id: number | string;
   slug?: string;
   description?: string | null;
+  shortDescription?: string | null;
   specifications?: string | null;
   careInstructions?: string | null;
   attributes?: Record<string, string | number | null> | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  brand?: string | null;
+  mpn?: string | null;
+  condition?: string | null;
+  noIndex?: boolean | null;
   category?: { id: string; name: string; slug: string } | null;
   variants?: ProductVariantInfo[];
   tags?: string[];
