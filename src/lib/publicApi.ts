@@ -103,6 +103,7 @@ export type ProductFacets = {
 export type ProductSort = "latest" | "oldest" | "price-asc" | "price-desc";
 
 export type ProductQuery = {
+  q?: string;
   categoryIds?: string[];
   tags?: string[];
   sizes?: string[];
@@ -116,6 +117,7 @@ export type ProductQuery = {
 
 export function buildProductQuery(q: ProductQuery): string {
   const params = new URLSearchParams();
+  if (q.q && q.q.trim()) params.set("q", q.q.trim());
   if (q.categoryIds?.length) params.set("categoryIds", q.categoryIds.join(","));
   if (q.tags?.length) params.set("tags", q.tags.join(","));
   if (q.sizes?.length) params.set("sizes", q.sizes.join(","));

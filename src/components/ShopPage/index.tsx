@@ -22,6 +22,7 @@ import {
 import type { Product } from "@/types/product";
 
 type FilterState = {
+  q: string;
   categoryIds: string[];
   tags: string[];
   sizes: string[];
@@ -32,6 +33,7 @@ type FilterState = {
 };
 
 const DEFAULT_FILTERS: FilterState = {
+  q: "",
   categoryIds: [],
   tags: [],
   sizes: [],
@@ -74,6 +76,7 @@ const ShopPage = () => {
         setFacets(f);
 
         const next: FilterState = { ...DEFAULT_FILTERS };
+        next.q = searchParams?.get("q")?.trim() ?? "";
         const slug = searchParams?.get("category");
         if (slug) {
           const cat = f.categories.find((c) => c.slug === slug);
@@ -124,10 +127,27 @@ const ShopPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // External URL changes (e.g. header search while staying on /shop)
+  useEffect(() => {
+    if (!bootstrapped) return;
+    const urlQ = searchParams?.get("q")?.trim() ?? "";
+    const urlIds = csv(searchParams?.get("categoryIds") ?? null);
+    setFilters((prev) => {
+      const sameQ = prev.q === urlQ;
+      const sameIds =
+        prev.categoryIds.length === urlIds.length &&
+        prev.categoryIds.every((id, i) => urlIds[i] === id);
+      if (sameQ && sameIds) return prev;
+      return { ...prev, q: urlQ, categoryIds: urlIds };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams?.get("q"), searchParams?.get("categoryIds"), bootstrapped]);
+
   // Sync URL whenever filters change (after bootstrap)
   useEffect(() => {
     if (!bootstrapped) return;
     const params = new URLSearchParams();
+    if (filters.q) params.set("q", filters.q);
     if (filters.categoryIds.length)
       params.set("categoryIds", filters.categoryIds.join(","));
     if (filters.tags.length) params.set("tags", filters.tags.join(","));
@@ -156,6 +176,7 @@ const ShopPage = () => {
       setLoading(true);
       try {
         const qs = buildProductQuery({
+          q: filters.q,
           categoryIds: filters.categoryIds,
           tags: filters.tags,
           sizes: filters.sizes,
@@ -239,6 +260,7 @@ const ShopPage = () => {
 
   const activeFilterCount = useMemo(() => {
     let n =
+      (filters.q ? 1 : 0) +
       filters.categoryIds.length +
       filters.tags.length +
       filters.sizes.length +
@@ -256,6 +278,7 @@ const ShopPage = () => {
   }, [filters, facets]);
 
   const headerLabel = useMemo(() => {
+    if (filters.q) return `Results for “${filters.q}”`;
     if (filters.categoryIds.length === 1 && facets) {
       const cat = facets.categories.find(
         (c) => c.id === filters.categoryIds[0],
@@ -263,7 +286,7 @@ const ShopPage = () => {
       if (cat) return cat.name;
     }
     return "Explore all accessories";
-  }, [filters.categoryIds, facets]);
+  }, [filters.q, filters.categoryIds, facets]);
 
   return (
     <>
