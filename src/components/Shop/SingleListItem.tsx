@@ -45,8 +45,8 @@ const SingleListItem = ({ item }: { item: Product }) => {
 
   return (
     <div className="group rounded-lg bg-white shadow-1">
-      <div className="flex">
-        <div className="shadow-list relative overflow-hidden flex items-center justify-center max-w-[270px] w-full sm:min-h-[270px] p-4">
+      <div className="flex flex-col sm:flex-row">
+        <div className="shadow-list relative overflow-hidden flex items-center justify-center w-full sm:max-w-[270px] min-h-[270px] sm:min-h-[270px] p-4 shrink-0">
           <Image src={item.imgs.previews[0]} alt="" width={250} height={250} unoptimized />
 
           <div className="absolute left-0 bottom-0 translate-y-full w-full flex items-center justify-center gap-2.5 pb-5 ease-linear duration-200 group-hover:translate-y-0">
