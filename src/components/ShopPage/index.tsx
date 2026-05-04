@@ -15,6 +15,7 @@ import {
   buildProductQuery,
   dbProductToShopItem,
   fetchPublic,
+  type DbCategory,
   type DbProduct,
   type ProductFacets,
   type ProductSort,
@@ -62,6 +63,7 @@ const ShopPage = () => {
   const [stickyMenu, setStickyMenu] = useState(false);
   const [shopData, setShopData] = useState<Product[]>([]);
   const [facets, setFacets] = useState<ProductFacets | null>(null);
+  const [allCategories, setAllCategories] = useState<DbCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [bootstrapped, setBootstrapped] = useState(false);
@@ -71,15 +73,21 @@ const ShopPage = () => {
     let cancelled = false;
     (async () => {
       try {
-        const f = await fetchPublic<ProductFacets>("/products/facets");
+        const [f, cats] = await Promise.all([
+          fetchPublic<ProductFacets>("/products/facets"),
+          fetchPublic<DbCategory[]>("/categories?topLevel=true"),
+        ]);
         if (cancelled) return;
         setFacets(f);
+        setAllCategories(cats);
 
         const next: FilterState = { ...DEFAULT_FILTERS };
         next.q = searchParams?.get("q")?.trim() ?? "";
         const slug = searchParams?.get("category");
         if (slug) {
-          const cat = f.categories.find((c) => c.slug === slug);
+          const cat =
+            cats.find((c) => c.slug === slug) ??
+            f.categories.find((c) => c.slug === slug);
           if (cat) next.categoryIds = [cat.id];
         }
         const idsParam = csv(searchParams?.get("categoryIds") ?? null);
@@ -133,8 +141,10 @@ const ShopPage = () => {
     const urlQ = searchParams?.get("q")?.trim() ?? "";
     let urlIds = csv(searchParams?.get("categoryIds") ?? null);
     const urlSlug = searchParams?.get("category");
-    if (urlIds.length === 0 && urlSlug && facets) {
-      const cat = facets.categories.find((c) => c.slug === urlSlug);
+    if (urlIds.length === 0 && urlSlug) {
+      const cat =
+        allCategories.find((c) => c.slug === urlSlug) ??
+        facets?.categories.find((c) => c.slug === urlSlug);
       if (cat) urlIds = [cat.id];
     }
     setFilters((prev) => {
@@ -152,6 +162,7 @@ const ShopPage = () => {
     searchParams?.get("category"),
     bootstrapped,
     facets,
+    allCategories,
   ]);
 
   // Sync URL whenever filters change (after bootstrap)
@@ -290,14 +301,15 @@ const ShopPage = () => {
 
   const headerLabel = useMemo(() => {
     if (filters.q) return `Results for “${filters.q}”`;
-    if (filters.categoryIds.length === 1 && facets) {
-      const cat = facets.categories.find(
-        (c) => c.id === filters.categoryIds[0],
-      );
+    if (filters.categoryIds.length === 1) {
+      const id = filters.categoryIds[0];
+      const cat =
+        allCategories.find((c) => c.id === id) ??
+        facets?.categories.find((c) => c.id === id);
       if (cat) return cat.name;
     }
     return "Explore all accessories";
-  }, [filters.q, filters.categoryIds, facets]);
+  }, [filters.q, filters.categoryIds, facets, allCategories]);
 
   return (
     <>
