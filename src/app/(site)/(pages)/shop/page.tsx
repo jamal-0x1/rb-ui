@@ -2,6 +2,9 @@ import React from "react";
 import ShopPage from "@/components/ShopPage";
 
 import { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Shop | NextCommerce Nextjs E-commerce template",
   description: "Browse all accessories",
