@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CustomSelect from "./CustomSelect";
 import { menuData } from "./menuData";
 import Dropdown from "./Dropdown";
@@ -8,10 +9,16 @@ import { useAppSelector } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
+import { fetchPublic, type ProductFacets } from "@/lib/publicApi";
 import Image from "next/image";
 
 const Header = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchCategory, setSearchCategory] = useState("");
+  const [searchOptions, setSearchOptions] = useState<
+    { label: string; value: string }[]
+  >([{ label: "All Categories", value: "" }]);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [stickyMenu, setStickyMenu] = useState(false);
   const { openCartModal } = useCartModalContext();
@@ -36,16 +43,35 @@ const Header = () => {
     window.addEventListener("scroll", handleStickyMenu);
   });
 
-  const options = [
-    { label: "All Categories", value: "0" },
-    { label: "Desktop", value: "1" },
-    { label: "Laptop", value: "2" },
-    { label: "Monitor", value: "3" },
-    { label: "Phone", value: "4" },
-    { label: "Watch", value: "5" },
-    { label: "Mouse", value: "6" },
-    { label: "Tablet", value: "7" },
-  ];
+  // Live category options from facets
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const f = await fetchPublic<ProductFacets>("/products/facets");
+        if (cancelled) return;
+        setSearchOptions([
+          { label: "All Categories", value: "" },
+          ...f.categories.map((c) => ({ label: c.name, value: c.id })),
+        ]);
+      } catch {
+        /* keep default */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    const q = searchQuery.trim();
+    if (q) params.set("q", q);
+    if (searchCategory) params.set("categoryIds", searchCategory);
+    const qs = params.toString();
+    router.push(qs ? `/shop?${qs}` : "/shop");
+  };
 
   return (
     <header
@@ -72,9 +98,13 @@ const Header = () => {
             </Link>
 
             <div className="max-w-[475px] w-full">
-              <form>
+              <form onSubmit={handleSearchSubmit}>
                 <div className="flex items-center">
-                  <CustomSelect options={options} />
+                  <CustomSelect
+                    options={searchOptions}
+                    value={searchCategory}
+                    onChange={setSearchCategory}
+                  />
 
                   <div className="relative max-w-[333px] sm:min-w-[333px] w-full">
                     {/* <!-- divider --> */}
@@ -91,6 +121,7 @@ const Header = () => {
                     />
 
                     <button
+                      type="submit"
                       id="search-btn"
                       aria-label="Search"
                       className="flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 ease-in duration-200 hover:text-blue"
@@ -236,7 +267,7 @@ const Header = () => {
                       cart
                     </span>
                     <p className="font-medium text-custom-sm text-dark">
-                      ${totalPrice}
+                      ৳{totalPrice}
                     </p>
                   </div>
                 </button>

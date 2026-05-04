@@ -1,53 +1,158 @@
 "use client";
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Breadcrumb from "../Common/Breadcrumb";
 import Login from "./Login";
-import Shipping from "./Shipping";
 import ShippingMethod from "./ShippingMethod";
 import PaymentMethod from "./PaymentMethod";
 import Coupon from "./Coupon";
 import Billing from "./Billing";
+import {
+  createCheckout,
+  SHIPPING_LABELS,
+  SHIPPING_RATES,
+  type CheckoutShippingMethod,
+} from "@/lib/orderApi";
+import { selectTotalPrice, removeAllItemsFromCart } from "@/redux/features/cart-slice";
+import { useAppSelector, type AppDispatch } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { useCurrentUser } from "@/lib/userAuth";
+
+const formatBDT = (n: number) => `৳${n.toLocaleString("en-IN")}`;
 
 const Checkout = () => {
+  const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  const cartItems = useAppSelector((state) => state.cartReducer.items);
+  const subtotal = useAppSelector(selectTotalPrice);
+  const { user, loading: userLoading } = useCurrentUser();
+
+  const [shippingMethod, setShippingMethod] =
+    useState<CheckoutShippingMethod>("standard");
+  const [coupon, setCoupon] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const shippingFee = SHIPPING_RATES[shippingMethod];
+  const total = subtotal + shippingFee;
+
+  const checkoutItems = useMemo(
+    () =>
+      cartItems
+        .filter((i) => !!i.variantId)
+        .map((i) => ({ variantId: i.variantId as string, quantity: i.quantity })),
+    [cartItems],
+  );
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!user) {
+      router.push(`/signin?next=/checkout`);
+      return;
+    }
+    if (cartItems.length === 0) {
+      setError("Your cart is empty.");
+      return;
+    }
+    if (checkoutItems.length === 0) {
+      setError(
+        "Cart contains items without a variant. Re-add them from the shop.",
+      );
+      return;
+    }
+
+    const fd = new FormData(e.currentTarget);
+    const required = ["firstName", "lastName", "address", "town", "country", "phone", "email"];
+    for (const k of required) {
+      if (!String(fd.get(k) ?? "").trim()) {
+        setError(`Missing required field: ${k}`);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    try {
+      const order = await createCheckout({
+        items: checkoutItems,
+        shipping: {
+          firstName: String(fd.get("firstName")),
+          lastName: String(fd.get("lastName")),
+          line1: String(fd.get("address")),
+          line2: String(fd.get("addressTwo") ?? "") || undefined,
+          city: String(fd.get("town")),
+          state: undefined,
+          postalCode: String(fd.get("postalCode") ?? "0000"),
+          country: String(fd.get("country")),
+          phone: String(fd.get("phone")),
+          email: String(fd.get("email")),
+        },
+        paymentMethod: "cod",
+        shippingMethod,
+        couponCode: coupon || undefined,
+        notes: notes || undefined,
+      });
+      dispatch(removeAllItemsFromCart());
+      router.push(`/order-success/${order.id}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Checkout failed";
+      if (msg === "AUTH_REQUIRED") {
+        router.push(`/signin?next=/checkout`);
+        return;
+      }
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <>
       <Breadcrumb title={"Checkout"} pages={["checkout"]} />
       <section className="overflow-hidden py-20 bg-gray-2">
         <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-          <form>
-            <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11">
-              {/* <!-- checkout left --> */}
-              <div className="lg:max-w-[670px] w-full">
-                {/* <!-- login box --> */}
-                <Login />
+          {!userLoading && !user && (
+            <div className="mb-6 rounded-lg border border-blue/30 bg-blue/5 px-4 py-3 text-sm text-dark">
+              You need an account to place an order.{" "}
+              <Link href="/signin?next=/checkout" className="text-blue underline">
+                Sign in
+              </Link>{" "}
+              or{" "}
+              <Link href="/signup" className="text-blue underline">
+                create one
+              </Link>
+              .
+            </div>
+          )}
 
-                {/* <!-- billing details --> */}
+          <form onSubmit={handleSubmit}>
+            <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-11">
+              {/* left */}
+              <div className="lg:max-w-[670px] w-full">
+                <Login />
                 <Billing />
 
-                {/* <!-- address box two --> */}
-                <Shipping />
-
-                {/* <!-- others note box --> */}
                 <div className="bg-white shadow-1 rounded-[10px] p-4 sm:p-8.5 mt-7.5">
-                  <div>
-                    <label htmlFor="notes" className="block mb-2.5">
-                      Other Notes (optional)
-                    </label>
-
-                    <textarea
-                      name="notes"
-                      id="notes"
-                      rows={5}
-                      placeholder="Notes about your order, e.g. speacial notes for delivery."
-                      className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                    ></textarea>
-                  </div>
+                  <label htmlFor="notes" className="block mb-2.5">
+                    Other Notes (optional)
+                  </label>
+                  <textarea
+                    name="notes"
+                    id="notes"
+                    rows={5}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Notes about your order, e.g. special delivery instructions."
+                    className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+                  />
                 </div>
               </div>
 
-              {/* // <!-- checkout right --> */}
+              {/* right */}
               <div className="max-w-[455px] w-full">
-                {/* <!-- order list box --> */}
                 <div className="bg-white shadow-1 rounded-[10px]">
                   <div className="border-b border-gray-3 py-5 px-4 sm:px-8.5">
                     <h3 className="font-medium text-xl text-dark">
@@ -56,87 +161,91 @@ const Checkout = () => {
                   </div>
 
                   <div className="pt-2.5 pb-8.5 px-4 sm:px-8.5">
-                    {/* <!-- title --> */}
                     <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <h4 className="font-medium text-dark">Product</h4>
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-dark text-right">
-                          Subtotal
-                        </h4>
-                      </div>
+                      <h4 className="font-medium text-dark">Product</h4>
+                      <h4 className="font-medium text-dark text-right">
+                        Subtotal
+                      </h4>
                     </div>
 
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">iPhone 14 Plus , 6/128GB</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right">$899.00</p>
-                      </div>
+                    {cartItems.length === 0 ? (
+                      <p className="py-5 text-center text-dark-4">
+                        Cart is empty.{" "}
+                        <Link href="/shop" className="text-blue underline">
+                          Continue shopping
+                        </Link>
+                      </p>
+                    ) : (
+                      cartItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-5 border-b border-gray-3 gap-4"
+                        >
+                          <p className="text-dark flex-1 line-clamp-2">
+                            {item.title}
+                            {item.quantity > 1 && (
+                              <span className="text-dark-4 text-custom-sm">
+                                {" "}
+                                × {item.quantity}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-dark text-right">
+                            {formatBDT(item.discountedPrice * item.quantity)}
+                          </p>
+                        </div>
+                      ))
+                    )}
+
+                    <div className="flex items-center justify-between py-3 border-b border-gray-3">
+                      <p className="text-dark">Subtotal</p>
+                      <p className="text-dark text-right">
+                        {formatBDT(subtotal)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-gray-3">
+                      <p className="text-dark">
+                        {SHIPPING_LABELS[shippingMethod]}
+                      </p>
+                      <p className="text-dark text-right">
+                        {formatBDT(shippingFee)}
+                      </p>
                     </div>
 
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">Asus RT Dual Band Router</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right">$129.00</p>
-                      </div>
-                    </div>
-
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">Havit HV-G69 USB Gamepad</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right">$29.00</p>
-                      </div>
-                    </div>
-
-                    {/* <!-- product item --> */}
-                    <div className="flex items-center justify-between py-5 border-b border-gray-3">
-                      <div>
-                        <p className="text-dark">Shipping Fee</p>
-                      </div>
-                      <div>
-                        <p className="text-dark text-right">$15.00</p>
-                      </div>
-                    </div>
-
-                    {/* <!-- total --> */}
                     <div className="flex items-center justify-between pt-5">
-                      <div>
-                        <p className="font-medium text-lg text-dark">Total</p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-lg text-dark text-right">
-                          $1072.00
-                        </p>
-                      </div>
+                      <p className="font-medium text-lg text-dark">Total</p>
+                      <p className="font-medium text-lg text-dark text-right">
+                        {formatBDT(total)}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* <!-- coupon box --> */}
-                <Coupon />
+                <Coupon
+                  value={coupon}
+                  onApply={(c) => setCoupon(c)}
+                  onClear={() => setCoupon("")}
+                />
 
-                {/* <!-- shipping box --> */}
-                <ShippingMethod />
+                <ShippingMethod
+                  value={shippingMethod}
+                  onChange={setShippingMethod}
+                />
 
-                {/* <!-- payment box --> */}
                 <PaymentMethod />
 
-                {/* <!-- checkout button --> */}
+                {error && (
+                  <div className="mt-6 rounded-lg border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
+                    {error}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5"
+                  disabled={submitting || cartItems.length === 0}
+                  className="w-full flex justify-center font-medium text-white bg-blue py-3 px-6 rounded-md ease-out duration-200 hover:bg-blue-dark mt-7.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Process to Checkout
+                  {submitting ? "Placing order..." : "Place Order"}
                 </button>
               </div>
             </div>

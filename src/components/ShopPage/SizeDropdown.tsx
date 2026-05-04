@@ -1,11 +1,16 @@
 "use client";
 import React, { useState } from "react";
 
-const ColorsDropdwon = () => {
-  const [toggleDropdown, setToggleDropdown] = useState(true);
-  const [activeColor, setActiveColor] = useState("blue");
+type Props = {
+  sizes: { value: string; count: number }[];
+  selected: string[];
+  onToggle: (value: string) => void;
+};
 
-  const colors = ["red", "blue", "orange", "pink", "purple"];
+const SizeDropdown = ({ sizes, selected, onToggle }: Props) => {
+  const [toggleDropdown, setToggleDropdown] = useState(true);
+
+  if (sizes.length === 0) return null;
 
   return (
     <div className="bg-white shadow-1 rounded-lg">
@@ -15,9 +20,10 @@ const ColorsDropdwon = () => {
           toggleDropdown && "shadow-filter"
         }`}
       >
-        <p className="text-dark">Colors</p>
+        <p className="text-dark">Size</p>
         <button
-          aria-label="button for colors dropdown"
+          type="button"
+          aria-label="button for size dropdown"
           className={`text-dark ease-out duration-200 ${
             toggleDropdown && "rotate-180"
           }`}
@@ -40,43 +46,32 @@ const ColorsDropdwon = () => {
         </button>
       </div>
 
-      {/* <!-- dropdown menu --> */}
       <div
         className={`flex-wrap gap-2.5 p-6 ${
           toggleDropdown ? "flex" : "hidden"
         }`}
       >
-        {colors.map((color, key) => (
-          <label
-            key={key}
-            htmlFor={color}
-            className="cursor-pointer select-none flex items-center"
-          >
-            <div className="relative">
-              <input
-                type="radio"
-                name="color"
-                id={color}
-                className="sr-only"
-                onChange={() => setActiveColor(color)}
-              />
-              <div
-                className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${
-                  activeColor === color && "border"
-                }`}
-                style={{ borderColor: `${color}` }}
-              >
-                <span
-                  className="block w-3 h-3 rounded-full"
-                  style={{ backgroundColor: `${color}` }}
-                ></span>
-              </div>
-            </div>
-          </label>
-        ))}
+        {sizes.map(({ value, count }) => {
+          const isActive = selected.includes(value);
+          return (
+            <button
+              type="button"
+              key={value}
+              onClick={() => onToggle(value)}
+              title={`${count} product${count === 1 ? "" : "s"}`}
+              className={`select-none flex items-center rounded-md text-custom-sm py-[5px] px-3.5 ease-out duration-150 ${
+                isActive
+                  ? "bg-blue text-white"
+                  : "bg-gray-1 text-dark hover:bg-blue hover:text-white"
+              }`}
+            >
+              {value}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-export default ColorsDropdwon;
+export default SizeDropdown;

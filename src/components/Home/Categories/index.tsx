@@ -1,16 +1,32 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { useCallback, useRef, useEffect } from "react";
-import data from "./categoryData";
+import { useCallback, useRef, useEffect, useState } from "react";
 import Image from "next/image";
 
-// Import Swiper styles
 import "swiper/css/navigation";
 import "swiper/css";
 import SingleItem from "./SingleItem";
+import { fetchPublic, resolveAsset, type DbCategory } from "@/lib/publicApi";
+import type { Category } from "@/types/category";
 
 const Categories = () => {
   const sliderRef = useRef(null);
+  const [data, setData] = useState<Category[]>([]);
+
+  useEffect(() => {
+    fetchPublic<DbCategory[]>("/categories?topLevel=true")
+      .then((rows) =>
+        setData(
+          rows.map((c) => ({
+            id: c.id,
+            slug: c.slug,
+            title: c.name,
+            img: resolveAsset(c.imageUrl),
+          })),
+        ),
+      )
+      .catch(() => setData([]));
+  }, []);
 
   const handlePrev = useCallback(() => {
     if (!sliderRef.current) return;
