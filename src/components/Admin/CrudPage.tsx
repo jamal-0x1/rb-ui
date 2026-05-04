@@ -292,7 +292,23 @@ export function CrudPage({ resource }: { resource: Resource }) {
   const [editRow, setEditRow] = useState<Row | null>(null); // includes _isEdit flag
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
 
+  // mobile card list search (products only)
+  const [mobileSearch, setMobileSearch] = useState("");
+
   const listFields = resource.fields.filter((f) => !f.hideInList);
+
+  const apiOrigin = API_URL.replace(/\/api\/?$/, "");
+
+  const mobileFiltered = useMemo(() => {
+    if (resource.slug !== "products") return [] as Row[];
+    const q = mobileSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      [r.name, r.sku, r.slug, r.brand]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [resource.slug, rows, mobileSearch]);
 
   const load = async () => {
     setLoading(true);
@@ -512,16 +528,93 @@ export function CrudPage({ resource }: { resource: Resource }) {
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-4">
-          <DataTable
-            columns={columns}
-            data={rows}
-            loading={loading}
-            searchPlaceholder={`Search ${resource.label.toLowerCase()}…`}
+      {/* Mobile card list — products only */}
+      {resource.slug === "products" && (
+        <div className="md:hidden mb-4 space-y-3">
+          <Input
+            placeholder="Search products…"
+            value={mobileSearch}
+            onChange={(e) => setMobileSearch(e.target.value)}
           />
-        </CardContent>
-      </Card>
+          {loading ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                Loading…
+              </CardContent>
+            </Card>
+          ) : mobileFiltered.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                No products match.
+              </CardContent>
+            </Card>
+          ) : (
+            mobileFiltered.map((row) => {
+              const url = productThumbs[row.id];
+              const src = url
+                ? url.startsWith("http")
+                  ? url
+                  : `${apiOrigin}${url}`
+                : null;
+              return (
+                <Card key={row.id} className="p-3">
+                  <div className="flex items-start gap-3">
+                    {src ? (
+                      <img
+                        src={src}
+                        alt=""
+                        className="size-16 rounded-md object-cover bg-muted shrink-0"
+                      />
+                    ) : (
+                      <div className="size-16 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground shrink-0">
+                        —
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground truncate">
+                        {row.sku}
+                      </p>
+                      <p className="text-sm font-medium truncate">{row.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm font-medium">
+                          ৳{row.basePrice}
+                        </span>
+                        {row.active === false && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-border">
+                    <RowActions
+                      row={row}
+                      resource={resource}
+                      onView={handleView}
+                      onEdit={handleEdit}
+                      onDelete={setDeleteTarget}
+                    />
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      <div className={resource.slug === "products" ? "hidden md:block" : ""}>
+        <Card>
+          <CardContent className="p-4">
+            <DataTable
+              columns={columns}
+              data={rows}
+              loading={loading}
+              searchPlaceholder={`Search ${resource.label.toLowerCase()}…`}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Non-core dialogs */}
       {!resource.coreModule && (

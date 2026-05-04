@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "rb-admin",
+  title: "AKR Admin",
   description: "Admin portal",
 };
 

@@ -38,7 +38,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             >
               <MenuIcon className="h-5 w-5" />
             </SheetTrigger>
-            <span className="font-semibold text-sm">rb-admin</span>
+            <span className="font-bold text-sm text-foreground">AKR Admin</span>
             <span className="w-9" />
           </header>
 

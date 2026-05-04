@@ -127,10 +127,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="px-5 py-4 border-b border-slate-800">
         <Link
           href="/admin"
-          className="text-base font-semibold tracking-tight hover:text-white transition-colors"
+          className="text-base font-bold tracking-tight text-white hover:text-slate-300 transition-colors"
           onClick={onNavigate}
         >
-          rb-admin
+          AKR Admin
         </Link>
       </div>
 

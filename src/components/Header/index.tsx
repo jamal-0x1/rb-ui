@@ -11,7 +11,6 @@ import { selectTotalPrice } from "@/redux/features/cart-slice";
 import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
 import { fetchPublic, type ProductFacets } from "@/lib/publicApi";
 import { useCurrentUser } from "@/lib/userAuth";
-import Image from "next/image";
 
 const Header = () => {
   const router = useRouter();
@@ -96,13 +95,12 @@ const Header = () => {
         >
           {/* <!-- header top left --> */}
           <div className="xl:w-auto flex-col sm:flex-row w-full flex sm:justify-between sm:items-center gap-5 sm:gap-10">
-            <Link className="flex-shrink-0" href="/">
-              <Image
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={219}
-                height={36}
-              />
+            <Link
+              className="flex-shrink-0 font-bold text-2xl sm:text-3xl tracking-tight text-blue hover:text-blue-dark ease-out duration-200"
+              href="/"
+              aria-label="AKR — home"
+            >
+              AKR
             </Link>
 
             <div className="max-w-[475px] w-full">
