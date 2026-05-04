@@ -45,13 +45,14 @@ export function resolveAsset(url: string | null | undefined): string {
 }
 
 export function dbProductToShopItem(p: DbProduct): Product {
-  const previews = (p.images ?? [])
-    .filter((i) => i.isPrimary || i.sortOrder < 2)
-    .slice(0, 2)
-    .map((i) => resolveAsset(i.url));
-  const thumbnails = (p.images ?? [])
-    .slice(2, 4)
-    .map((i) => resolveAsset(i.url));
+  const sortedImages = (p.images ?? []).slice().sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1;
+    if (!a.isPrimary && b.isPrimary) return 1;
+    return a.sortOrder - b.sortOrder;
+  });
+  const allUrls = sortedImages.map((i) => resolveAsset(i.url));
+  const previews = allUrls.slice(0, 4);
+  const thumbnails = allUrls.length > 1 ? allUrls : previews;
   const price = Number(p.basePrice);
   return {
     id: p.id,
@@ -60,6 +61,18 @@ export function dbProductToShopItem(p: DbProduct): Product {
     reviews: 0,
     price,
     discountedPrice: price,
+    description: p.description,
+    category: p.category
+      ? { id: p.category.id, name: p.category.name, slug: p.category.slug }
+      : null,
+    variants: (p.variants ?? []).map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      size: v.size,
+      color: v.color,
+    })),
+    tags: (p.tags ?? []).map((t) => t.tag.name),
+    inStock: p.active,
     imgs: {
       previews: previews.length > 0 ? previews : ["/images/products/product-1-bg-1.png"],
       thumbnails: thumbnails.length > 0 ? thumbnails : previews,
