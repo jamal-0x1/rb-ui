@@ -37,8 +37,15 @@ export type DbProduct = {
   category?: DbCategory | null;
   categoryId: string;
   images?: DbProductImage[];
-  variants?: Array<{ id: string; sku: string; size: string | null; color: string | null }>;
+  variants?: Array<{
+    id: string;
+    sku: string;
+    size: string | null;
+    color: string | null;
+    inventory?: { quantityOnHand: number } | null;
+  }>;
   tags?: Array<{ tag: { id: string; name: string } }>;
+  reviewStats?: { count: number; average: number };
 };
 
 export function resolveAsset(url: string | null | undefined): string {
@@ -76,9 +83,11 @@ export function dbProductToShopItem(p: DbProduct): Product {
       sku: v.sku,
       size: v.size,
       color: v.color,
+      inventory: v.inventory ?? null,
     })),
     tags: (p.tags ?? []).map((t) => t.tag.name),
     inStock: p.active,
+    reviewStats: p.reviewStats,
     imgs: {
       previews: previews.length > 0 ? previews : ["/images/products/product-1-bg-1.png"],
       thumbnails: thumbnails.length > 0 ? thumbnails : previews,

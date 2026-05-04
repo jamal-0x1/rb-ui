@@ -1,1324 +1,785 @@
 "use client";
-import React, { use, useEffect, useState } from "react";
-import Breadcrumb from "../Common/Breadcrumb";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Breadcrumb from "../Common/Breadcrumb";
 import Newsletter from "../Common/Newsletter";
 import RecentlyViewdItems from "./RecentlyViewd";
 import { usePreviewSlider } from "@/app/context/PreviewSliderContext";
-import { useAppSelector } from "@/redux/store";
+import { useAppSelector, type AppDispatch } from "@/redux/store";
+import { useDispatch } from "react-redux";
+import { addItemToCart } from "@/redux/features/cart-slice";
+import { addItemToWishlist } from "@/redux/features/wishlist-slice";
+import { useCartModalContext } from "@/app/context/CartSidebarModalContext";
+import {
+  fetchReviewsForProduct,
+  submitReview,
+  type ReviewItem,
+} from "@/lib/reviewsApi";
+import { useCurrentUser } from "@/lib/userAuth";
+import type { Product, ProductVariantInfo } from "@/types/product";
+
+const COLOR_HEX: Record<string, string> = {
+  Black: "#111",
+  Midnight: "#1a1a2e",
+  Purple: "#7c3aed",
+  Silver: "#cbd5e1",
+  "Space Gray": "#4a4a4a",
+  Titanium: "#a8a29e",
+  Graphite: "#374151",
+  "Pale Gray": "#e5e7eb",
+  Blue: "#3b82f6",
+  Red: "#ef4444",
+  Orange: "#f97316",
+  Pink: "#ec4899",
+  Navy: "#1e3a8a",
+  White: "#fafafa",
+  Green: "#22c55e",
+  Gold: "#d4af37",
+};
+const colorSwatch = (name: string) =>
+  COLOR_HEX[name] ?? name.toLowerCase();
+
+const formatBDT = (n: number) => `৳${Number(n).toLocaleString("en-IN")}`;
+
+function Star({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      fill={filled ? "#FFA645" : "none"}
+      stroke="#FFA645"
+      strokeWidth="1.2"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M16.79 6.72L11.7 5.93L9.39 1.10C9.22 0.76 8.78 0.76 8.61 1.10L6.30 5.96L1.24 6.72C0.87 6.78 0.73 7.26 1.01 7.51L4.70 11.31L3.83 16.62C3.77 16.99 4.13 17.30 4.47 17.07L9.06 14.57L13.61 17.07C13.92 17.24 14.32 16.96 14.23 16.62L13.36 11.31L17.04 7.51C17.27 7.26 17.16 6.78 16.79 6.72Z" />
+    </svg>
+  );
+}
+
+function StarRow({ rating, max = 5 }: { rating: number; max?: number }) {
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: max }).map((_, i) => (
+        <Star key={i} filled={i < Math.round(rating)} />
+      ))}
+    </div>
+  );
+}
+
+const TABS = [
+  { id: "tabOne", title: "Description" },
+  { id: "tabTwo", title: "Additional Information" },
+  { id: "tabThree", title: "Reviews" },
+];
 
 const ShopDetails = () => {
-  const [activeColor, setActiveColor] = useState("blue");
+  const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  const { openCartModal } = useCartModalContext();
   const { openPreviewModal } = usePreviewSlider();
-  const [previewImg, setPreviewImg] = useState(0);
+  const { user } = useCurrentUser();
 
-  const [storage, setStorage] = useState("gb128");
-  const [type, setType] = useState("active");
-  const [sim, setSim] = useState("dual");
-  const [quantity, setQuantity] = useState(1);
-
-  const [activeTab, setActiveTab] = useState("tabOne");
-
-  const storages = [
-    {
-      id: "gb128",
-      title: "128 GB",
-    },
-    {
-      id: "gb256",
-      title: "256 GB",
-    },
-    {
-      id: "gb512",
-      title: "521 GB",
-    },
-  ];
-
-  const types = [
-    {
-      id: "active",
-      title: "Active",
-    },
-
-    {
-      id: "inactive",
-      title: "Inactive",
-    },
-  ];
-
-  const sims = [
-    {
-      id: "dual",
-      title: "Dual",
-    },
-
-    {
-      id: "e-sim",
-      title: "E Sim",
-    },
-  ];
-
-  const tabs = [
-    {
-      id: "tabOne",
-      title: "Description",
-    },
-    {
-      id: "tabTwo",
-      title: "Additional Information",
-    },
-    {
-      id: "tabThree",
-      title: "Reviews",
-    },
-  ];
-
-  const alreadyExist = localStorage.getItem("productDetails");
   const productFromStorage = useAppSelector(
-    (state) => state.productDetailsReducer.value
+    (state) => state.productDetailsReducer.value,
   );
 
-  const product = alreadyExist ? JSON.parse(alreadyExist) : productFromStorage;
+  const initialProduct =
+    typeof window !== "undefined"
+      ? (() => {
+          const raw = localStorage.getItem("productDetails");
+          return raw ? (JSON.parse(raw) as Product) : null;
+        })()
+      : null;
 
-  // Dynamic option sets sourced from product.variants
-  const variantColors: string[] = Array.from(
-    new Set(
-      ((product.variants ?? []) as Array<{ color: string | null }>)
-        .map((v) => v?.color)
-        .filter((c): c is string => !!c),
-    ),
-  );
-  const variantSizes: string[] = Array.from(
-    new Set(
-      ((product.variants ?? []) as Array<{ size: string | null }>)
-        .map((v) => v?.size)
-        .filter((s): s is string => !!s),
-    ),
-  );
-  const productTags: string[] = (product.tags ?? []) as string[];
-  const COLOR_HEX: Record<string, string> = {
-    Black: "#111", Midnight: "#1a1a2e", Purple: "#7c3aed",
-    Silver: "#cbd5e1", "Space Gray": "#4a4a4a", Titanium: "#a8a29e",
-    Graphite: "#374151", "Pale Gray": "#e5e7eb", Blue: "#3b82f6",
-    Red: "#ef4444", Orange: "#f97316", Pink: "#ec4899", Navy: "#1e3a8a",
-    White: "#fafafa", Green: "#22c55e",
-  };
-  const colorSwatch = (name: string) => COLOR_HEX[name] ?? name.toLowerCase();
+  const product: Product = (initialProduct ??
+    productFromStorage) as Product;
 
   useEffect(() => {
-    localStorage.setItem("productDetails", JSON.stringify(product));
-  }, [product]);
+    if (productFromStorage?.title) {
+      try {
+        localStorage.setItem(
+          "productDetails",
+          JSON.stringify(productFromStorage),
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [productFromStorage]);
 
-  // pass the product here when you get the real data.
-  const handlePreviewSlider = () => {
-    openPreviewModal();
+  const variants: ProductVariantInfo[] = product.variants ?? [];
+  const productTags: string[] = product.tags ?? [];
+
+  const variantColors = Array.from(
+    new Set(variants.map((v) => v.color).filter((c): c is string => !!c)),
+  );
+  const variantSizes = Array.from(
+    new Set(variants.map((v) => v.size).filter((s): s is string => !!s)),
+  );
+
+  const [activeColor, setActiveColor] = useState<string>(
+    variantColors[0] ?? "",
+  );
+  const [activeSize, setActiveSize] = useState<string>(variantSizes[0] ?? "");
+  const [previewImg, setPreviewImg] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState("tabOne");
+
+  // Pick variant matching color+size, else first
+  const selectedVariant: ProductVariantInfo | undefined = useMemo(() => {
+    const match = variants.find(
+      (v) =>
+        (!variantColors.length || v.color === activeColor) &&
+        (!variantSizes.length || v.size === activeSize),
+    );
+    return match ?? variants[0];
+  }, [variants, activeColor, activeSize, variantColors.length, variantSizes.length]);
+
+  const stockQty = selectedVariant?.inventory?.quantityOnHand ?? 0;
+  const inStock = stockQty > 0;
+  const lowStock = inStock && stockQty <= 5;
+
+  // Cap quantity to stock when stock changes
+  useEffect(() => {
+    if (stockQty > 0 && quantity > stockQty) setQuantity(stockQty);
+  }, [stockQty, quantity]);
+
+  // Reviews
+  const [reviewsLoaded, setReviewsLoaded] = useState(false);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviewStats, setReviewStats] = useState<{
+    count: number;
+    average: number;
+  }>(product.reviewStats ?? { count: 0, average: 0 });
+
+  useEffect(() => {
+    if (!product.id) return;
+    let cancelled = false;
+    (async () => {
+      const data = await fetchReviewsForProduct(String(product.id));
+      if (cancelled) return;
+      setReviews(data.items);
+      setReviewStats(data.stats);
+      setReviewsLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
+
+  // Add a Review form
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewBody, setReviewBody] = useState("");
+  const [reviewName, setReviewName] = useState("");
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewOk, setReviewOk] = useState<string | null>(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReviewError(null);
+    setReviewOk(null);
+    if (!user) {
+      router.push(
+        `/signin?next=${encodeURIComponent(`/shop-details/${product.slug ?? ""}`)}`,
+      );
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const created = await submitReview({
+        productId: String(product.id),
+        rating: reviewRating,
+        title: reviewTitle || undefined,
+        body: reviewBody || undefined,
+      });
+      setReviews((prev) => [created, ...prev]);
+      setReviewStats((prev) => {
+        const newCount = prev.count + 1;
+        const newAvg = (prev.average * prev.count + created.rating) / newCount;
+        return { count: newCount, average: newAvg };
+      });
+      setReviewBody("");
+      setReviewTitle("");
+      setReviewName("");
+      setReviewOk("Thanks — your review is posted.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to submit review";
+      if (msg === "AUTH_REQUIRED") {
+        router.push(`/signin?next=/shop-details/${product.slug ?? ""}`);
+        return;
+      }
+      setReviewError(msg);
+    } finally {
+      setSubmittingReview(false);
+    }
   };
+
+  const buildCartPayload = () => ({
+    ...product,
+    variantId: selectedVariant?.id,
+    quantity,
+  });
+
+  const handleAddToCart = () => {
+    if (!inStock) return;
+    dispatch(addItemToCart(buildCartPayload() as never));
+    openCartModal();
+  };
+
+  const handleBuyNow = () => {
+    if (!inStock) return;
+    dispatch(addItemToCart(buildCartPayload() as never));
+    router.push("/checkout");
+  };
+
+  const handleAddToWishlist = () => {
+    dispatch(
+      addItemToWishlist({
+        ...product,
+        status: inStock ? "available" : "out-of-stock",
+        quantity: 1,
+      } as never),
+    );
+  };
+
+  if (!product || !product.title) {
+    return (
+      <main className="max-w-[1170px] mx-auto px-4 py-20 text-center">
+        <p className="text-dark-4">Loading product…</p>
+      </main>
+    );
+  }
 
   return (
     <>
-      <Breadcrumb title={"Shop Details"} pages={["shop details"]} />
+      <Breadcrumb title={product.title} pages={["shop", "/", "details"]} />
 
-      {product.title === "" ? (
-        "Please add product"
-      ) : (
-        <>
-          <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
-            <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-              <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
-                <div className="lg:max-w-[570px] w-full">
-                  <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
-                    <div>
-                      <button
-                        onClick={handlePreviewSlider}
-                        aria-label="button for zoom"
-                        className="gallery__Image w-11 h-11 rounded-[5px] bg-gray-1 shadow-1 flex items-center justify-center ease-out duration-200 text-dark hover:text-blue absolute top-4 lg:top-6 right-4 lg:right-6 z-50"
-                      >
-                        <svg
-                          className="fill-current"
-                          width="22"
-                          height="22"
-                          viewBox="0 0 22 22"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M9.11493 1.14581L9.16665 1.14581C9.54634 1.14581 9.85415 1.45362 9.85415 1.83331C9.85415 2.21301 9.54634 2.52081 9.16665 2.52081C7.41873 2.52081 6.17695 2.52227 5.23492 2.64893C4.31268 2.77292 3.78133 3.00545 3.39339 3.39339C3.00545 3.78133 2.77292 4.31268 2.64893 5.23492C2.52227 6.17695 2.52081 7.41873 2.52081 9.16665C2.52081 9.54634 2.21301 9.85415 1.83331 9.85415C1.45362 9.85415 1.14581 9.54634 1.14581 9.16665L1.14581 9.11493C1.1458 7.43032 1.14579 6.09599 1.28619 5.05171C1.43068 3.97699 1.73512 3.10712 2.42112 2.42112C3.10712 1.73512 3.97699 1.43068 5.05171 1.28619C6.09599 1.14579 7.43032 1.1458 9.11493 1.14581ZM16.765 2.64893C15.823 2.52227 14.5812 2.52081 12.8333 2.52081C12.4536 2.52081 12.1458 2.21301 12.1458 1.83331C12.1458 1.45362 12.4536 1.14581 12.8333 1.14581L12.885 1.14581C14.5696 1.1458 15.904 1.14579 16.9483 1.28619C18.023 1.43068 18.8928 1.73512 19.5788 2.42112C20.2648 3.10712 20.5693 3.97699 20.7138 5.05171C20.8542 6.09599 20.8542 7.43032 20.8541 9.11494V9.16665C20.8541 9.54634 20.5463 9.85415 20.1666 9.85415C19.787 9.85415 19.4791 9.54634 19.4791 9.16665C19.4791 7.41873 19.4777 6.17695 19.351 5.23492C19.227 4.31268 18.9945 3.78133 18.6066 3.39339C18.2186 3.00545 17.6873 2.77292 16.765 2.64893ZM1.83331 12.1458C2.21301 12.1458 2.52081 12.4536 2.52081 12.8333C2.52081 14.5812 2.52227 15.823 2.64893 16.765C2.77292 17.6873 3.00545 18.2186 3.39339 18.6066C3.78133 18.9945 4.31268 19.227 5.23492 19.351C6.17695 19.4777 7.41873 19.4791 9.16665 19.4791C9.54634 19.4791 9.85415 19.787 9.85415 20.1666C9.85415 20.5463 9.54634 20.8541 9.16665 20.8541H9.11494C7.43032 20.8542 6.09599 20.8542 5.05171 20.7138C3.97699 20.5693 3.10712 20.2648 2.42112 19.5788C1.73512 18.8928 1.43068 18.023 1.28619 16.9483C1.14579 15.904 1.1458 14.5696 1.14581 12.885L1.14581 12.8333C1.14581 12.4536 1.45362 12.1458 1.83331 12.1458ZM20.1666 12.1458C20.5463 12.1458 20.8541 12.4536 20.8541 12.8333V12.885C20.8542 14.5696 20.8542 15.904 20.7138 16.9483C20.5693 18.023 20.2648 18.8928 19.5788 19.5788C18.8928 20.2648 18.023 20.5693 16.9483 20.7138C15.904 20.8542 14.5696 20.8542 12.885 20.8541H12.8333C12.4536 20.8541 12.1458 20.5463 12.1458 20.1666C12.1458 19.787 12.4536 19.4791 12.8333 19.4791C14.5812 19.4791 15.823 19.4777 16.765 19.351C17.6873 19.227 18.2186 18.9945 18.6066 18.6066C18.9945 18.2186 19.227 17.6873 19.351 16.765C19.4777 15.823 19.4791 14.5812 19.4791 12.8333C19.4791 12.4536 19.787 12.1458 20.1666 12.1458Z"
-                            fill=""
-                          />
-                        </svg>
-                      </button>
-
-                      {product.imgs?.previews?.[previewImg] && (
-                        <Image
-                          src={product.imgs.previews[previewImg]}
-                          alt="products-details"
-                          width={400}
-                          height={400}
-                          unoptimized
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ?  &apos;border-blue &apos; :  &apos;border-transparent&apos; */}
-                  <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
-                    {product.imgs?.thumbnails.map((item, key) => (
-                      <button
-                        onClick={() => setPreviewImg(key)}
-                        key={key}
-                        className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 ease-out duration-200 border-2 hover:border-blue ${key === previewImg
-                          ? "border-blue"
-                          : "border-transparent"
-                          }`}
-                      >
-                        <Image
-                          width={50}
-                          height={50}
-                          src={item}
-                          alt="thumbnail"
-                          unoptimized
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* <!-- product content --> */}
-                <div className="max-w-[539px] w-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">
-                      {product.title}
-                    </h2>
-
-                    {productTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {productTags.map((t) => (
-                          <span
-                            key={t}
-                            className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5 capitalize"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {product.category?.name && (
-                    <p className="text-sm text-dark-4 mb-3">
-                      Category: <span className="text-dark">{product.category.name}</span>
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-5.5 mb-4.5">
-                    <div className="flex items-center gap-2.5">
-                      {/* <!-- stars --> */}
-                      <div className="flex items-center gap-1">
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-
-                        <svg
-                          className="fill-[#FFA645]"
-                          width="18"
-                          height="18"
-                          viewBox="0 0 18 18"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g clipPath="url(#clip0_375_9172)">
-                            <path
-                              d="M16.7906 6.72187L11.7 5.93438L9.39377 1.09688C9.22502 0.759375 8.77502 0.759375 8.60627 1.09688L6.30002 5.9625L1.23752 6.72187C0.871891 6.77812 0.731266 7.25625 1.01252 7.50938L4.69689 11.3063L3.82502 16.6219C3.76877 16.9875 4.13439 17.2969 4.47189 17.0719L9.05627 14.5687L13.6125 17.0719C13.9219 17.2406 14.3156 16.9594 14.2313 16.6219L13.3594 11.3063L17.0438 7.50938C17.2688 7.25625 17.1563 6.77812 16.7906 6.72187Z"
-                              fill=""
-                            />
-                          </g>
-                          <defs>
-                            <clipPath id="clip0_375_9172">
-                              <rect width="18" height="18" fill="white" />
-                            </clipPath>
-                          </defs>
-                        </svg>
-                      </div>
-
-                      <span> (5 customer reviews) </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <g clipPath="url(#clip0_375_9221)">
-                          <path
-                            d="M10 0.5625C4.78125 0.5625 0.5625 4.78125 0.5625 10C0.5625 15.2188 4.78125 19.4688 10 19.4688C15.2188 19.4688 19.4688 15.2188 19.4688 10C19.4688 4.78125 15.2188 0.5625 10 0.5625ZM10 18.0625C5.5625 18.0625 1.96875 14.4375 1.96875 10C1.96875 5.5625 5.5625 1.96875 10 1.96875C14.4375 1.96875 18.0625 5.59375 18.0625 10.0312C18.0625 14.4375 14.4375 18.0625 10 18.0625Z"
-                            fill="#22AD5C"
-                          />
-                          <path
-                            d="M12.6875 7.09374L8.9688 10.7187L7.2813 9.06249C7.00005 8.78124 6.56255 8.81249 6.2813 9.06249C6.00005 9.34374 6.0313 9.78124 6.2813 10.0625L8.2813 12C8.4688 12.1875 8.7188 12.2812 8.9688 12.2812C9.2188 12.2812 9.4688 12.1875 9.6563 12L13.6875 8.12499C13.9688 7.84374 13.9688 7.40624 13.6875 7.12499C13.4063 6.84374 12.9688 6.84374 12.6875 7.09374Z"
-                            fill="#22AD5C"
-                          />
-                        </g>
-                        <defs>
-                          <clipPath id="clip0_375_9221">
-                            <rect width="20" height="20" fill="white" />
-                          </clipPath>
-                        </defs>
-                      </svg>
-
-                      <span className="text-green"> In Stock </span>
-                    </div>
-                  </div>
-
-                  <h3 className="font-medium text-custom-1 mb-4.5">
-                    <span className="text-sm sm:text-base text-dark">
-                      Price: ৳{Number(product.price).toLocaleString()}
-                    </span>
-                    {product.discountedPrice &&
-                      product.discountedPrice !== product.price && (
-                        <span className="line-through ml-2 text-dark-4">
-                          ৳{Number(product.discountedPrice).toLocaleString()}
-                        </span>
-                      )}
-                  </h3>
-
-                  {product.description && (
-                    <p className="text-sm text-dark-4 mb-5 leading-relaxed">
-                      {product.description}
-                    </p>
-                  )}
-
-                  <ul className="flex flex-col gap-2">
-                    <li className="flex items-center gap-2.5">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M13.3589 8.35863C13.603 8.11455 13.603 7.71882 13.3589 7.47475C13.1149 7.23067 12.7191 7.23067 12.4751 7.47475L8.75033 11.1995L7.5256 9.97474C7.28152 9.73067 6.8858 9.73067 6.64172 9.97474C6.39764 10.2188 6.39764 10.6146 6.64172 10.8586L8.30838 12.5253C8.55246 12.7694 8.94819 12.7694 9.19227 12.5253L13.3589 8.35863Z"
-                          fill="#3C50E0"
-                        />
-                        <path
-                          fillRule="evenodd"
-                          clipRule="evenodd"
-                          d="M10.0003 1.04169C5.05277 1.04169 1.04199 5.05247 1.04199 10C1.04199 14.9476 5.05277 18.9584 10.0003 18.9584C14.9479 18.9584 18.9587 14.9476 18.9587 10C18.9587 5.05247 14.9479 1.04169 10.0003 1.04169ZM2.29199 10C2.29199 5.74283 5.74313 2.29169 10.0003 2.29169C14.2575 2.29169 17.7087 5.74283 17.7087 10C17.7087 14.2572 14.2575 17.7084 10.0003 17.7084C5.74313 17.7084 2.29199 14.2572 2.29199 10Z"
-                          fill="#3C50E0"
-                        />
-                      </svg>
-                      Free delivery available
-                    </li>
-
-                    <li className="flex items-center gap-2.5">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M13.3589 8.35863C13.603 8.11455 13.603 7.71882 13.3589 7.47475C13.1149 7.23067 12.7191 7.23067 12.4751 7.47475L8.75033 11.1995L7.5256 9.97474C7.28152 9.73067 6.8858 9.73067 6.64172 9.97474C6.39764 10.2188 6.39764 10.6146 6.64172 10.8586L8.30838 12.5253C8.55246 12.7694 8.94819 12.7694 9.19227 12.5253L13.3589 8.35863Z"
-                          fill="#3C50E0"
-                        />
-                        <path
-                          fillRule="evenodd"
-                          clipRule="evenodd"
-                          d="M10.0003 1.04169C5.05277 1.04169 1.04199 5.05247 1.04199 10C1.04199 14.9476 5.05277 18.9584 10.0003 18.9584C14.9479 18.9584 18.9587 14.9476 18.9587 10C18.9587 5.05247 14.9479 1.04169 10.0003 1.04169ZM2.29199 10C2.29199 5.74283 5.74313 2.29169 10.0003 2.29169C14.2575 2.29169 17.7087 5.74283 17.7087 10C17.7087 14.2572 14.2575 17.7084 10.0003 17.7084C5.74313 17.7084 2.29199 14.2572 2.29199 10Z"
-                          fill="#3C50E0"
-                        />
-                      </svg>
-                      Sales 30% Off Use Code: PROMO30
-                    </li>
-                  </ul>
-
-                  <form onSubmit={(e) => e.preventDefault()}>
-                    <div className="flex flex-col gap-4.5 border-y border-gray-3 mt-7.5 mb-9 py-9">
-                      {variantColors.length > 0 && (
-                        <div className="flex items-center gap-4">
-                          <div className="min-w-[65px]">
-                            <h4 className="font-medium text-dark">Color:</h4>
-                          </div>
-                          <div className="flex items-center gap-2.5">
-                            {variantColors.map((color) => (
-                              <label
-                                key={color}
-                                htmlFor={`color-${color}`}
-                                title={color}
-                                className="cursor-pointer select-none flex items-center"
-                              >
-                                <input
-                                  type="radio"
-                                  name="color"
-                                  id={`color-${color}`}
-                                  className="sr-only"
-                                  onChange={() => setActiveColor(color)}
-                                />
-                                <div
-                                  className={`flex items-center justify-center w-5.5 h-5.5 rounded-full ${activeColor === color ? "border" : ""}`}
-                                  style={{ borderColor: colorSwatch(color) }}
-                                >
-                                  <span
-                                    className="block w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: colorSwatch(color) }}
-                                  />
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {variantSizes.length > 0 && (
-                        <div className="flex items-center gap-4">
-                          <div className="min-w-[65px]">
-                            <h4 className="font-medium text-dark">Size:</h4>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {variantSizes.map((s) => (
-                              <button
-                                type="button"
-                                key={s}
-                                onClick={() => setStorage(s)}
-                                className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${storage === s ? "border-blue bg-blue text-white" : "border-gray-4 text-dark hover:border-blue"}`}
-                              >
-                                {s}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4.5">
-                      <div className="flex items-center rounded-md border border-gray-3">
-                        <button
-                          aria-label="button for remove product"
-                          className="flex items-center justify-center w-12 h-12 ease-out duration-200 hover:text-blue"
-                          onClick={() =>
-                            quantity > 1 && setQuantity(quantity - 1)
-                          }
-                        >
-                          <svg
-                            className="fill-current"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M3.33301 10.0001C3.33301 9.53984 3.7061 9.16675 4.16634 9.16675H15.833C16.2932 9.16675 16.6663 9.53984 16.6663 10.0001C16.6663 10.4603 16.2932 10.8334 15.833 10.8334H4.16634C3.7061 10.8334 3.33301 10.4603 3.33301 10.0001Z"
-                              fill=""
-                            />
-                          </svg>
-                        </button>
-
-                        <span className="flex items-center justify-center w-16 h-12 border-x border-gray-4">
-                          {quantity}
-                        </span>
-
-                        <button
-                          onClick={() => setQuantity(quantity + 1)}
-                          aria-label="button for add product"
-                          className="flex items-center justify-center w-12 h-12 ease-out duration-200 hover:text-blue"
-                        >
-                          <svg
-                            className="fill-current"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M3.33301 10C3.33301 9.5398 3.7061 9.16671 4.16634 9.16671H15.833C16.2932 9.16671 16.6663 9.5398 16.6663 10C16.6663 10.4603 16.2932 10.8334 15.833 10.8334H4.16634C3.7061 10.8334 3.33301 10.4603 3.33301 10Z"
-                              fill=""
-                            />
-                            <path
-                              d="M9.99967 16.6667C9.53944 16.6667 9.16634 16.2936 9.16634 15.8334L9.16634 4.16671C9.16634 3.70647 9.53944 3.33337 9.99967 3.33337C10.4599 3.33337 10.833 3.70647 10.833 4.16671L10.833 15.8334C10.833 16.2936 10.4599 16.6667 9.99967 16.6667Z"
-                              fill=""
-                            />
-                          </svg>
-                        </button>
-                      </div>
-
-                      <a
-                        href="#"
-                        className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
-                      >
-                        Purchase Now
-                      </a>
-
-                      <a
-                        href="#"
-                        className="flex items-center justify-center w-12 h-12 rounded-md border border-gray-3 ease-out duration-200 hover:text-white hover:bg-dark hover:border-transparent"
-                      >
-                        <svg
-                          className="fill-current"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M5.62436 4.42423C3.96537 5.18256 2.75 6.98626 2.75 9.13713C2.75 11.3345 3.64922 13.0283 4.93829 14.4798C6.00072 15.6761 7.28684 16.6677 8.54113 17.6346C8.83904 17.8643 9.13515 18.0926 9.42605 18.3219C9.95208 18.7366 10.4213 19.1006 10.8736 19.3649C11.3261 19.6293 11.6904 19.75 12 19.75C12.3096 19.75 12.6739 19.6293 13.1264 19.3649C13.5787 19.1006 14.0479 18.7366 14.574 18.3219C14.8649 18.0926 15.161 17.8643 15.4589 17.6346C16.7132 16.6677 17.9993 15.6761 19.0617 14.4798C20.3508 13.0283 21.25 11.3345 21.25 9.13713C21.25 6.98626 20.0346 5.18256 18.3756 4.42423C16.7639 3.68751 14.5983 3.88261 12.5404 6.02077C12.399 6.16766 12.2039 6.25067 12 6.25067C11.7961 6.25067 11.601 6.16766 11.4596 6.02077C9.40166 3.88261 7.23607 3.68751 5.62436 4.42423ZM12 4.45885C9.68795 2.39027 7.09896 2.1009 5.00076 3.05999C2.78471 4.07296 1.25 6.42506 1.25 9.13713C1.25 11.8027 2.3605 13.8361 3.81672 15.4758C4.98287 16.789 6.41022 17.888 7.67083 18.8586C7.95659 19.0786 8.23378 19.2921 8.49742 19.4999C9.00965 19.9037 9.55954 20.3343 10.1168 20.66C10.6739 20.9855 11.3096 21.25 12 21.25C12.6904 21.25 13.3261 20.9855 13.8832 20.66C14.4405 20.3343 14.9903 19.9037 15.5026 19.4999C15.7662 19.2921 16.0434 19.0786 16.3292 18.8586C17.5898 17.888 19.0171 16.789 20.1833 15.4758C21.6395 13.8361 22.75 11.8027 22.75 9.13713C22.75 6.42506 21.2153 4.07296 18.9992 3.05999C16.901 2.1009 14.3121 2.39027 12 4.45885Z"
-                            fill=""
-                          />
-                        </svg>
-                      </a>
-                    </div>
-                  </form>
-                </div>
+      <section className="overflow-hidden relative pb-20 pt-5 lg:pt-20 xl:pt-28">
+        <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-17.5">
+            {/* Gallery */}
+            <div className="lg:max-w-[570px] w-full">
+              <div className="lg:min-h-[512px] rounded-lg shadow-1 bg-gray-2 p-4 sm:p-7.5 relative flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => openPreviewModal()}
+                  aria-label="zoom"
+                  className="w-11 h-11 rounded-[5px] bg-gray-1 shadow-1 flex items-center justify-center text-dark hover:text-blue absolute top-4 right-4 z-10"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M21 21l-4.35-4.35M11 18a7 7 0 110-14 7 7 0 010 14z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                {product.imgs?.previews?.[previewImg] && (
+                  <Image
+                    src={product.imgs.previews[previewImg]}
+                    alt={product.title}
+                    width={400}
+                    height={400}
+                    unoptimized
+                  />
+                )}
               </div>
-            </div>
-          </section>
 
-          <section className="overflow-hidden bg-gray-2 py-20">
-            <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
-              {/* <!--== tab header start ==--> */}
-              <div className="flex flex-wrap items-center bg-white rounded-[10px] shadow-1 gap-5 xl:gap-12.5 py-4.5 px-4 sm:px-6">
-                {tabs.map((item, key) => (
+              <div className="flex flex-wrap sm:flex-nowrap gap-4.5 mt-6">
+                {product.imgs?.thumbnails?.map((src, key) => (
                   <button
+                    type="button"
                     key={key}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`font-medium lg:text-lg ease-out duration-200 hover:text-blue relative before:h-0.5 before:bg-blue before:absolute before:left-0 before:bottom-0 before:ease-out before:duration-200 hover:before:w-full ${activeTab === item.id
-                      ? "text-blue before:w-full"
-                      : "text-dark before:w-0"
-                      }`}
+                    onClick={() => setPreviewImg(key)}
+                    className={`flex items-center justify-center w-15 sm:w-25 h-15 sm:h-25 overflow-hidden rounded-lg bg-gray-2 shadow-1 border-2 hover:border-blue ${
+                      key === previewImg ? "border-blue" : "border-transparent"
+                    }`}
                   >
-                    {item.title}
+                    <Image src={src} alt="thumbnail" width={50} height={50} unoptimized />
                   </button>
                 ))}
               </div>
-              {/* <!--== tab header end ==--> */}
-
-              {/* <!--== tab content start ==--> */}
-              {/* <!-- tab content one (dynamic) --> */}
-              <div>
-                <div
-                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabOne" ? "flex" : "hidden"
-                    }`}
-                >
-                  <div className="max-w-[670px] w-full">
-                    <h2 className="font-medium text-2xl text-dark mb-7">
-                      Specifications:
-                    </h2>
-                    {(product.specifications || product.description) ? (
-                      (product.specifications || product.description)
-                        .split(/\n\s*\n/)
-                        .map((para: string, i: number) => (
-                          <p key={i} className="mb-6 whitespace-pre-line">
-                            {para}
-                          </p>
-                        ))
-                    ) : (
-                      <p className="text-dark-4">No specifications available.</p>
-                    )}
-                  </div>
-
-                  {product.careInstructions && (
-                    <div className="max-w-[447px] w-full">
-                      <h2 className="font-medium text-2xl text-dark mb-7">
-                        Care &amp; Maintenance:
-                      </h2>
-                      {product.careInstructions
-                        .split(/\n\s*\n/)
-                        .map((para: string, i: number) => (
-                          <p key={i} className="mb-6 whitespace-pre-line">
-                            {para}
-                          </p>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* <!-- tab content one end --> */}
-
-              {/* <!-- tab content two (dynamic attributes) --> */}
-              <div>
-                <div
-                  className={`rounded-xl bg-white shadow-1 p-4 sm:p-6 mt-10 ${activeTab === "tabTwo" ? "block" : "hidden"
-                    }`}
-                >
-                  {product.attributes &&
-                  Object.keys(product.attributes).length > 0 ? (
-                    Object.entries(
-                      product.attributes as Record<string, unknown>,
-                    ).map(([k, v]) => (
-                      <div
-                        key={k}
-                        className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5"
-                      >
-                        <div className="max-w-[450px] min-w-[140px] w-full">
-                          <p className="text-sm sm:text-base text-dark">{k}</p>
-                        </div>
-                        <div className="w-full">
-                          <p className="text-sm sm:text-base text-dark">
-                            {String(v ?? "")}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-dark-4 px-2 py-2">No additional information.</p>
-                  )}
-                </div>
-              </div>
-              {/* legacy hardcoded info hidden */}
-              <div className="hidden">
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">Brand</p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">Apple</p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">Model</p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        iPhone 14 Plus
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Display Size
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        6.7 inches
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Display Type
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Super Retina XDR OLED, HDR10, Dolby Vision, 800 nits
-                        (HBM), 1200 nits (peak)
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Display Resolution
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        1284 x 2778 pixels, 19.5:9 ratio
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">Chipset</p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Apple A15 Bionic (5 nm)
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">Memory</p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        128GB 6GB RAM | 256GB 6GB RAM | 512GB 6GB RAM
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Main Camera
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        12MP + 12MP | 4K@24/25/30/60fps, stereo sound rec.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Selfie Camera
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        12 MP | 4K@24/25/30/60fps, 1080p@25/30/60/120fps,
-                        gyro-EIS
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* <!-- info item --> */}
-                  <div className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5">
-                    <div className="max-w-[450px] min-w-[140px] w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Battery Info
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <p className="text-sm sm:text-base text-dark">
-                        Li-Ion 4323 mAh, non-removable | 15W wireless (MagSafe),
-                        7.5W wireless (Qi)
-                      </p>
-                    </div>
-                  </div>
-              </div>
-              {/* <!-- tab content two end --> */}
-
-              {/* <!-- tab content three start --> */}
-              <div>
-                <div
-                  className={`flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5 ${activeTab === "tabThree" ? "flex" : "hidden"
-                    }`}
-                >
-                  <div className="max-w-[570px] w-full">
-                    <h2 className="font-medium text-2xl text-dark mb-9">
-                      03 Review for this product
-                    </h2>
-
-                    <div className="flex flex-col gap-6">
-                      {/* <!-- review item --> */}
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
-                            <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-                              <Image
-                                src="/images/users/user-01.jpg"
-                                alt="author"
-                                className="w-12.5 h-12.5 rounded-full overflow-hidden"
-                                width={50}
-                                height={50}
-                              />
-                            </div>
-
-                            <div>
-                              <h3 className="font-medium text-dark">
-                                Davis Dorwart
-                              </h3>
-                              <p className="text-custom-sm">
-                                Serial Entrepreneur
-                              </p>
-                            </div>
-                          </a>
-
-                          <div className="flex items-center gap-1">
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-dark mt-6">
-                          “Lorem ipsum dolor sit amet, adipiscing elit. Donec
-                          malesuada justo vitaeaugue suscipit beautiful
-                          vehicula’’
-                        </p>
-                      </div>
-
-                      {/* <!-- review item --> */}
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
-                            <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-                              <Image
-                                src="/images/users/user-01.jpg"
-                                alt="author"
-                                className="w-12.5 h-12.5 rounded-full overflow-hidden"
-                                width={50}
-                                height={50}
-                              />
-                            </div>
-
-                            <div>
-                              <h3 className="font-medium text-dark">
-                                Davis Dorwart
-                              </h3>
-                              <p className="text-custom-sm">
-                                Serial Entrepreneur
-                              </p>
-                            </div>
-                          </a>
-
-                          <div className="flex items-center gap-1">
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-dark mt-6">
-                          “Lorem ipsum dolor sit amet, adipiscing elit. Donec
-                          malesuada justo vitaeaugue suscipit beautiful
-                          vehicula’’
-                        </p>
-                      </div>
-
-                      {/* <!-- review item --> */}
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <a href="#" className="flex items-center gap-4">
-                            <div className="w-12.5 h-12.5 rounded-full overflow-hidden">
-                              <Image
-                                src="/images/users/user-01.jpg"
-                                alt="author"
-                                className="w-12.5 h-12.5 rounded-full overflow-hidden"
-                                width={50}
-                                height={50}
-                              />
-                            </div>
-
-                            <div>
-                              <h3 className="font-medium text-dark">
-                                Davis Dorwart
-                              </h3>
-                              <p className="text-custom-sm">
-                                Serial Entrepreneur
-                              </p>
-                            </div>
-                          </a>
-
-                          <div className="flex items-center gap-1">
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-
-                            <span className="cursor-pointer text-[#FBB040]">
-                              <svg
-                                className="fill-current"
-                                width="15"
-                                height="16"
-                                viewBox="0 0 15 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                  fill=""
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-
-                        <p className="text-dark mt-6">
-                          “Lorem ipsum dolor sit amet, adipiscing elit. Donec
-                          malesuada justo vitaeaugue suscipit beautiful
-                          vehicula’’
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="max-w-[550px] w-full">
-                    <form>
-                      <h2 className="font-medium text-2xl text-dark mb-3.5">
-                        Add a Review
-                      </h2>
-
-                      <p className="mb-6">
-                        Your email address will not be published. Required
-                        fields are marked *
-                      </p>
-
-                      <div className="flex items-center gap-3 mb-7.5">
-                        <span>Your Rating*</span>
-
-                        <div className="flex items-center gap-1">
-                          <span className="cursor-pointer text-[#FBB040]">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-[#FBB040]">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-[#FBB040]">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-gray-5">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-
-                          <span className="cursor-pointer text-gray-5">
-                            <svg
-                              className="fill-current"
-                              width="15"
-                              height="16"
-                              viewBox="0 0 15 16"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M14.6604 5.90785L9.97461 5.18335L7.85178 0.732874C7.69645 0.422375 7.28224 0.422375 7.12691 0.732874L5.00407 5.20923L0.344191 5.90785C0.0076444 5.9596 -0.121797 6.39947 0.137085 6.63235L3.52844 10.1255L2.72591 15.0158C2.67413 15.3522 3.01068 15.6368 3.32134 15.4298L7.54112 13.1269L11.735 15.4298C12.0198 15.5851 12.3822 15.3263 12.3046 15.0158L11.502 10.1255L14.8934 6.63235C15.1005 6.39947 14.9969 5.9596 14.6604 5.90785Z"
-                                fill=""
-                              />
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
-                        <div className="mb-5">
-                          <label htmlFor="comments" className="block mb-2.5">
-                            Comments
-                          </label>
-
-                          <textarea
-                            name="comments"
-                            id="comments"
-                            rows={5}
-                            placeholder="Your comments"
-                            className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                          ></textarea>
-
-                          <span className="flex items-center justify-between mt-2.5">
-                            <span className="text-custom-sm text-dark-4">
-                              Maximum
-                            </span>
-                            <span className="text-custom-sm text-dark-4">
-                              0/250
-                            </span>
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col lg:flex-row gap-5 sm:gap-7.5 mb-5.5">
-                          <div>
-                            <label htmlFor="name" className="block mb-2.5">
-                              Name
-                            </label>
-
-                            <input
-                              type="text"
-                              name="name"
-                              id="name"
-                              placeholder="Your name"
-                              className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                            />
-                          </div>
-
-                          <div>
-                            <label htmlFor="email" className="block mb-2.5">
-                              Email
-                            </label>
-
-                            <input
-                              type="email"
-                              name="email"
-                              id="email"
-                              placeholder="Your email"
-                              className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none duration-200 focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md ease-out duration-200 hover:bg-blue-dark"
-                        >
-                          Submit Reviews
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-              {/* <!-- tab content three end --> */}
-              {/* <!--== tab content end ==--> */}
             </div>
-          </section>
 
-          <RecentlyViewdItems />
+            {/* Info */}
+            <div className="max-w-[539px] w-full">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-xl sm:text-2xl xl:text-custom-3 text-dark">
+                  {product.title}
+                </h2>
+                {productTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {productTags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex font-medium text-custom-sm text-white bg-blue rounded py-0.5 px-2.5 capitalize"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          <Newsletter />
-        </>
-      )}
+              {product.category?.name && (
+                <p className="text-sm text-dark-4 mb-3">
+                  Category:{" "}
+                  <Link
+                    href={`/shop?categoryIds=${product.category.id}`}
+                    className="text-dark hover:text-blue"
+                  >
+                    {product.category.name}
+                  </Link>
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-5.5 mb-4.5">
+                <div className="flex items-center gap-2.5">
+                  <StarRow rating={reviewStats.average} />
+                  <span>
+                    {reviewStats.count > 0
+                      ? `${reviewStats.average.toFixed(1)} (${reviewStats.count} review${
+                          reviewStats.count === 1 ? "" : "s"
+                        })`
+                      : "No reviews yet"}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full ${
+                      inStock ? "bg-green" : "bg-red"
+                    }`}
+                  />
+                  <span className={inStock ? "text-green" : "text-red"}>
+                    {inStock
+                      ? lowStock
+                        ? `Only ${stockQty} left`
+                        : "In Stock"
+                      : "Out of stock"}
+                  </span>
+                </div>
+              </div>
+
+              <h3 className="font-medium text-custom-1 mb-4.5">
+                <span className="text-sm sm:text-base text-dark">
+                  Price: {formatBDT(Number(product.price))}
+                </span>
+                {product.discountedPrice &&
+                  product.discountedPrice !== product.price && (
+                    <span className="line-through ml-2 text-dark-4">
+                      {formatBDT(Number(product.discountedPrice))}
+                    </span>
+                  )}
+              </h3>
+
+              {product.description && (
+                <p className="text-sm text-dark-4 mb-5 leading-relaxed">
+                  {product.description}
+                </p>
+              )}
+
+              <div className="flex flex-col gap-4.5 border-y border-gray-3 mt-7.5 mb-9 py-9">
+                {variantColors.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    <div className="min-w-[65px]">
+                      <h4 className="font-medium text-dark">Color:</h4>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      {variantColors.map((color) => (
+                        <button
+                          type="button"
+                          key={color}
+                          onClick={() => setActiveColor(color)}
+                          title={color}
+                          className={`flex items-center justify-center w-6 h-6 rounded-full border-2 transition-colors ${
+                            activeColor === color
+                              ? "border-blue"
+                              : "border-transparent"
+                          }`}
+                        >
+                          <span
+                            className="block w-4 h-4 rounded-full ring-1 ring-gray-3"
+                            style={{ backgroundColor: colorSwatch(color) }}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {variantSizes.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    <div className="min-w-[65px]">
+                      <h4 className="font-medium text-dark">Size:</h4>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {variantSizes.map((s) => (
+                        <button
+                          type="button"
+                          key={s}
+                          onClick={() => setActiveSize(s)}
+                          className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                            activeSize === s
+                              ? "border-blue bg-blue text-white"
+                              : "border-gray-4 text-dark hover:border-blue"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4.5">
+                <div className="flex items-center rounded-md border border-gray-3">
+                  <button
+                    type="button"
+                    aria-label="decrement"
+                    className="flex items-center justify-center w-12 h-12 hover:text-blue disabled:opacity-50"
+                    disabled={quantity <= 1}
+                    onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+                  >
+                    −
+                  </button>
+                  <span className="flex items-center justify-center w-16 h-12 border-x border-gray-4">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="increment"
+                    className="flex items-center justify-center w-12 h-12 hover:text-blue disabled:opacity-50"
+                    disabled={inStock && quantity >= stockQty}
+                    onClick={() =>
+                      (!inStock || quantity < stockQty) &&
+                      setQuantity(quantity + 1)
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!inStock}
+                  className="inline-flex font-medium text-white bg-dark py-3 px-7 rounded-md hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {inStock ? "Add to Cart" : "Out of stock"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={!inStock}
+                  className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md hover:bg-blue-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Buy Now
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddToWishlist}
+                  aria-label="add to wishlist"
+                  className="flex items-center justify-center w-12 h-12 rounded-md border border-gray-3 text-dark hover:text-white hover:bg-dark hover:border-transparent"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 21s-7-4.5-9.5-9.5C.7 7.5 4 4 7.5 4 9.7 4 11 5 12 6.5 13 5 14.3 4 16.5 4 20 4 23.3 7.5 21.5 11.5 19 16.5 12 21 12 21z"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="overflow-hidden bg-gray-2 py-20">
+        <div className="max-w-[1170px] w-full mx-auto px-4 sm:px-8 xl:px-0">
+          <div className="flex flex-wrap items-center bg-white rounded-[10px] shadow-1 gap-5 xl:gap-12.5 py-4.5 px-4 sm:px-6">
+            {TABS.map((t) => (
+              <button
+                type="button"
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`font-medium lg:text-lg hover:text-blue relative before:h-0.5 before:bg-blue before:absolute before:left-0 before:bottom-0 ${
+                  activeTab === t.id
+                    ? "text-blue before:w-full"
+                    : "text-dark before:w-0"
+                }`}
+              >
+                {t.title}
+                {t.id === "tabThree" && reviewStats.count > 0 && (
+                  <span className="ml-2 text-custom-sm text-dark-4">
+                    ({reviewStats.count})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Description */}
+          {activeTab === "tabOne" && (
+            <div className="flex flex-col sm:flex-row gap-7.5 xl:gap-12.5 mt-12.5">
+              <div className="max-w-[670px] w-full">
+                <h2 className="font-medium text-2xl text-dark mb-7">Description</h2>
+                {(product.specifications || product.description) ? (
+                  (product.specifications || product.description)
+                    ?.split(/\n\n+/)
+                    .map((para, i) => (
+                      <p key={i} className="mb-3 text-dark-4 leading-relaxed">
+                        {para}
+                      </p>
+                    ))
+                ) : (
+                  <p className="text-dark-4">No description.</p>
+                )}
+                {product.careInstructions && (
+                  <>
+                    <h3 className="font-medium text-xl text-dark mt-7 mb-4">
+                      Care Instructions
+                    </h3>
+                    {product.careInstructions
+                      .split(/\n\n+/)
+                      .map((para, i) => (
+                        <p key={i} className="mb-3 text-dark-4 leading-relaxed">
+                          {para}
+                        </p>
+                      ))}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Additional Information */}
+          {activeTab === "tabTwo" && (
+            <div className="mt-12.5">
+              <h2 className="font-medium text-2xl text-dark mb-7">
+                Additional Information
+              </h2>
+              <div className="bg-white rounded-xl shadow-1">
+                {product.attributes &&
+                Object.keys(product.attributes).length > 0 ? (
+                  Object.entries(
+                    product.attributes as Record<string, unknown>,
+                  ).map(([key, value]) => (
+                    <div
+                      key={key}
+                      className="rounded-md even:bg-gray-1 flex py-4 px-4 sm:px-5"
+                    >
+                      <div className="max-w-[450px] min-w-[140px] w-full">
+                        <p className="text-sm sm:text-base text-dark capitalize">
+                          {key.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                      <div className="w-full">
+                        <p className="text-sm sm:text-base text-dark">
+                          {String(value)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-dark-4 px-5 py-6">No additional information.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Reviews */}
+          {activeTab === "tabThree" && (
+            <div className="flex flex-col lg:flex-row gap-7.5 xl:gap-12.5 mt-12.5">
+              <div className="lg:max-w-[570px] w-full">
+                <h2 className="font-medium text-2xl text-dark mb-9">
+                  {reviewStats.count} Review{reviewStats.count === 1 ? "" : "s"} for this product
+                </h2>
+
+                {!reviewsLoaded ? (
+                  <p className="text-dark-4">Loading reviews…</p>
+                ) : reviews.length === 0 ? (
+                  <p className="text-dark-4">
+                    No reviews yet. Be the first to write one.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-6">
+                    {reviews.map((r) => {
+                      const display =
+                        [r.user.firstName, r.user.lastName]
+                          .filter(Boolean)
+                          .join(" ") || r.user.email.split("@")[0];
+                      return (
+                        <div
+                          key={r.id}
+                          className="rounded-xl bg-white shadow-1 p-4 sm:p-6"
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <h3 className="font-medium text-dark">
+                                {display}
+                                {r.verifiedPurchase && (
+                                  <span className="ml-2 inline-flex text-custom-xs text-green bg-green-light-6 px-2 py-0.5 rounded">
+                                    Verified
+                                  </span>
+                                )}
+                              </h3>
+                              <p className="text-custom-xs text-dark-4">
+                                {new Date(r.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <StarRow rating={r.rating} />
+                          </div>
+                          {r.title && (
+                            <p className="text-dark mt-4 font-medium">
+                              {r.title}
+                            </p>
+                          )}
+                          {r.body && (
+                            <p className="text-dark-4 mt-2 leading-relaxed">
+                              {r.body}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="max-w-[550px] w-full">
+                <form onSubmit={handleReviewSubmit}>
+                  <h2 className="font-medium text-2xl text-dark mb-3.5">
+                    Add a Review
+                  </h2>
+                  <p className="mb-6 text-dark-4">
+                    Share your experience with this product. Required fields are
+                    marked *.
+                  </p>
+
+                  {!user && (
+                    <div className="mb-5 rounded-lg border border-blue/30 bg-blue/5 px-4 py-3 text-sm text-dark">
+                      You must be{" "}
+                      <Link
+                        href={`/signin?next=${encodeURIComponent(
+                          `/shop-details/${product.slug ?? ""}`,
+                        )}`}
+                        className="text-blue underline"
+                      >
+                        signed in
+                      </Link>{" "}
+                      to post a review.
+                    </div>
+                  )}
+
+                  {reviewError && (
+                    <div className="mb-5 rounded-lg border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
+                      {reviewError}
+                    </div>
+                  )}
+                  {reviewOk && (
+                    <div className="mb-5 rounded-lg border border-green/30 bg-green-light-6 px-4 py-3 text-sm text-green">
+                      {reviewOk}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 mb-7.5">
+                    <span>Your Rating*</span>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          type="button"
+                          key={n}
+                          onClick={() => setReviewRating(n)}
+                          aria-label={`Rate ${n} stars`}
+                          className="p-0.5"
+                        >
+                          <Star filled={n <= reviewRating} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-white shadow-1 p-4 sm:p-6">
+                    <div className="mb-5">
+                      <label htmlFor="review-title" className="block mb-2.5">
+                        Title (optional)
+                      </label>
+                      <input
+                        type="text"
+                        id="review-title"
+                        maxLength={120}
+                        value={reviewTitle}
+                        onChange={(e) => setReviewTitle(e.target.value)}
+                        placeholder="A short headline"
+                        className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full py-2.5 px-5 outline-none focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+                      />
+                    </div>
+
+                    <div className="mb-5">
+                      <label htmlFor="comments" className="block mb-2.5">
+                        Comments
+                      </label>
+                      <textarea
+                        id="comments"
+                        rows={5}
+                        maxLength={2000}
+                        value={reviewBody}
+                        onChange={(e) => setReviewBody(e.target.value)}
+                        placeholder="Your comments"
+                        className="rounded-md border border-gray-3 bg-gray-1 placeholder:text-dark-5 w-full p-5 outline-none focus:border-transparent focus:shadow-input focus:ring-2 focus:ring-blue/20"
+                      />
+                      <span className="flex items-center justify-between mt-2.5 text-custom-sm text-dark-4">
+                        <span>Maximum 2000</span>
+                        <span>{reviewBody.length}/2000</span>
+                      </span>
+                    </div>
+
+                    {!user && (
+                      <div className="mb-5">
+                        <label htmlFor="rev-name" className="block mb-2.5">
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          id="rev-name"
+                          value={reviewName}
+                          onChange={(e) => setReviewName(e.target.value)}
+                          placeholder="Your name"
+                          disabled
+                          className="rounded-md border border-gray-3 bg-gray-1 w-full py-2.5 px-5 opacity-50 cursor-not-allowed"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="inline-flex font-medium text-white bg-blue py-3 px-7 rounded-md hover:bg-blue-dark disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {submittingReview ? "Posting…" : "Submit Review"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <RecentlyViewdItems />
+      <Newsletter />
     </>
   );
 };

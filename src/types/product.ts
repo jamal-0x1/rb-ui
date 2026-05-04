@@ -3,6 +3,12 @@ export type ProductVariantInfo = {
   sku: string;
   size: string | null;
   color: string | null;
+  inventory?: { quantityOnHand: number } | null;
+};
+
+export type ReviewStats = {
+  count: number;
+  average: number;
 };
 
 export type Product = {
@@ -20,6 +26,7 @@ export type Product = {
   variants?: ProductVariantInfo[];
   tags?: string[];
   inStock?: boolean;
+  reviewStats?: ReviewStats;
   imgs?: {
     thumbnails: string[];
     previews: string[];
